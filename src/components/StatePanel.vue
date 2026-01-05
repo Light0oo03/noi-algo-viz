@@ -1,28 +1,34 @@
 <template>
   <div class="panel">
-    <h3>说明</h3>
-    <div class="note">{{ note }}</div>
-
-    <h3>队列（BFS）</h3>
-    <div class="queue">
-      <span v-if="queue.length === 0" class="empty">空</span>
-      <span v-for="(id, idx) in queue" :key="idx" class="pill">{{ id }}</span>
+    <div class="section">
+      <div class="section-title">📝 说明</div>
+      <div class="note">{{ note }}</div>
     </div>
 
-    <h3>节点状态</h3>
-    <div class="states">
-      <div v-for="(st, id) in sortedNodeStates" :key="id" class="row">
-        <span class="k">节点 {{ st[0] }}</span>
-        <span class="v">{{ stateText(st[1]) }}</span>
+    <div class="section">
+      <div class="section-title">📋 队列</div>
+      <div class="queue">
+        <span v-if="queue.length === 0" class="empty">空</span>
+        <span v-for="(id, idx) in queue" :key="idx" class="pill">{{ id }}</span>
       </div>
     </div>
 
-    <div class="meta">播放器：{{ playerStatus }}</div>
+    <div class="section collapsible">
+      <div class="section-title" @click="showNodeStates = !showNodeStates">
+        {{ showNodeStates ? '▼' : '▶' }} 节点状态
+      </div>
+      <div v-show="showNodeStates" class="states">
+        <div v-for="(st, id) in sortedNodeStates" :key="id" class="row">
+          <span class="k">{{ st[0] }}</span>
+          <span :class="['v', st[1]]">{{ stateText(st[1]) }}</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 type NodeVizState = 'default' | 'visited' | 'selected' | 'frontier';
 
@@ -32,6 +38,8 @@ const props = defineProps<{
   playerStatus: 'idle' | 'ready' | 'playing' | 'paused' | 'ended';
   nodeStates: Record<number, NodeVizState>;
 }>();
+
+const showNodeStates = ref(false);
 
 const sortedNodeStates = computed(() => {
   const entries = Object.entries(props.nodeStates).map(([k, v]) => [Number(k), v] as const);
@@ -43,7 +51,7 @@ function stateText(st: NodeVizState) {
   switch (st) {
     case 'default': return '默认';
     case 'frontier': return '已入队';
-    case 'selected': return '当前处理';
+    case 'selected': return '当前';
     case 'visited': return '已访问';
   }
 }
@@ -53,60 +61,105 @@ function stateText(st: NodeVizState) {
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
-h3 {
-  margin: 10px 0 4px;
-  font-size: 13px;
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9fb0c0;
+}
+
+.collapsible .section-title {
+  cursor: pointer;
+  user-select: none;
+}
+
+.collapsible .section-title:hover {
   color: #e6edf3;
 }
+
 .note {
-  padding: 10px;
+  padding: 8px;
   background: #0f172a;
   border: 1px solid #1f2a37;
-  border-radius: 8px;
-  min-height: 72px;
+  border-radius: 6px;
   white-space: pre-wrap;
   color: #cbd5e1;
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.4;
 }
+
 .queue {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
+
 .pill {
-  padding: 4px 8px;
+  padding: 2px 8px;
   border-radius: 999px;
-  background: #111827;
-  border: 1px solid #334155;
-  font-size: 12px;
+  background: #22c55e;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
 }
+
 .empty {
-  color: #94a3b8;
-  font-size: 12px;
+  color: #6b7280;
+  font-size: 11px;
 }
+
 .states {
-  border: 1px solid #1f2a37;
-  border-radius: 8px;
-  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
+
 .row {
   display: flex;
-  justify-content: space-between;
-  padding: 8px 10px;
-  background: #0b1220;
-  border-bottom: 1px solid #111827;
-  font-size: 12px;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: #111827;
+  border-radius: 4px;
+  font-size: 11px;
 }
-.row:last-child {
-  border-bottom: none;
+
+.k {
+  color: #cbd5e1;
+  font-weight: 600;
 }
-.k { color: #cbd5e1; }
-.v { color: #9fb0c0; }
-.meta {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #9fb0c0;
+
+.v {
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.v.default {
+  background: #374151;
+  color: #9ca3af;
+}
+
+.v.frontier {
+  background: #22c55e;
+  color: #fff;
+}
+
+.v.selected {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.v.visited {
+  background: #6366f1;
+  color: #fff;
 }
 </style>

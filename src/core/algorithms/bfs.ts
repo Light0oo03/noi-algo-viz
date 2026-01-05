@@ -6,6 +6,7 @@ import type { Graph, NodeId } from '../graph/types';
 import { buildAdjList, edgeKey } from '../graph/types';
 import type { BfsStep, BfsTrace } from '../trace/types';
 import { cloneVizState, createInitialVizState } from '../trace/types';
+import { BFS_CODE_LINES } from './bfs-code';
 
 /**
  * 生成 BFS 遍历的 trace
@@ -38,6 +39,7 @@ export function generateBfsTrace(graph: Graph, start: NodeId): BfsTrace {
   state.nodeStates[start] = 'frontier';
   state.queue = [...queue];
   state.note = `初始化：将起点 ${start} 入队，标记为已发现`;
+  state.highlightLines = BFS_CODE_LINES['init'];
 
   steps.push({
     type: 'init',
@@ -54,6 +56,7 @@ export function generateBfsTrace(graph: Graph, start: NodeId): BfsTrace {
     state.nodeStates[current] = 'selected';
     state.queue = [...queue];
     state.note = `出队：取出节点 ${current}，开始处理`;
+    state.highlightLines = BFS_CODE_LINES['dequeue'];
 
     steps.push({
       type: 'dequeue',
@@ -71,6 +74,7 @@ export function generateBfsTrace(graph: Graph, start: NodeId): BfsTrace {
       state = cloneVizState(state);
       state.edgeStates[ek] = 'checking';
       state.note = `检查边 (${current}, ${neighbor})：邻居节点 ${neighbor}`;
+      state.highlightLines = BFS_CODE_LINES['check-neighbor'];
 
       steps.push({
         type: 'check-neighbor',
@@ -84,6 +88,7 @@ export function generateBfsTrace(graph: Graph, start: NodeId): BfsTrace {
         state = cloneVizState(state);
         state.edgeStates[ek] = 'default';
         state.note = `跳过：节点 ${neighbor} 已访问过`;
+        state.highlightLines = BFS_CODE_LINES['skip-visited'];
 
         steps.push({
           type: 'skip-visited',
@@ -101,6 +106,7 @@ export function generateBfsTrace(graph: Graph, start: NodeId): BfsTrace {
         state.edgeStates[ek] = 'tree';
         state.queue = [...queue];
         state.note = `入队：将节点 ${neighbor} 加入队列，边 (${current}, ${neighbor}) 成为树边`;
+        state.highlightLines = BFS_CODE_LINES['enqueue'];
 
         steps.push({
           type: 'enqueue',
@@ -122,6 +128,7 @@ export function generateBfsTrace(graph: Graph, start: NodeId): BfsTrace {
   // ========== 结束步骤 ==========
   state = cloneVizState(state);
   state.note = `BFS 遍历完成！共访问 ${visited.size} 个节点`;
+  state.highlightLines = BFS_CODE_LINES['finish'];
 
   steps.push({
     type: 'finish',

@@ -116,7 +116,16 @@ export class TracePlayer {
     this.onStateChange?.(this.initialState);
   }
 
-  /** 单步执行 */
+  /** 完全清除 trace 并重置到 idle 状态 */
+  clear() {
+    this.clearTimer();
+    this.trace = null;
+    this.currentIndex = -1;
+    this.setStatus('idle');
+    this.onStateChange?.(this.initialState);
+  }
+
+  /** 单步向前执行 */
   stepOnce() {
     if (!this.trace) return;
 
@@ -132,6 +141,58 @@ export class TracePlayer {
     // executeStep 可能会把状态改成 ended，需要重新检查
     if (this._status as PlayerStatus !== 'ended') {
       this.setStatus('paused');
+    }
+  }
+
+  /** 单步向后执行（回退） */
+  stepBack() {
+    if (!this.trace) return;
+
+    this.clearTimer();
+
+    // 如果当前是初始状态（-1），不能再回退
+    if (this.currentIndex < 0) {
+      return;
+    }
+
+    this.currentIndex--;
+
+    if (this.currentIndex < 0) {
+      // 回到初始状态
+      this.onStateChange?.(this.initialState);
+      this.setStatus('ready');
+    } else {
+      const step = this.trace.steps[this.currentIndex];
+      if (step) {
+        this.onStateChange?.(cloneVizState(step.state));
+      }
+      this.setStatus('paused');
+    }
+  }
+
+  /** 跳转到指定步骤 */
+  goToStep(index: number) {
+    if (!this.trace) return;
+
+    this.clearTimer();
+
+    // 限制范围
+    const targetIndex = Math.max(-1, Math.min(index, this.trace.steps.length - 1));
+    this.currentIndex = targetIndex;
+
+    if (this.currentIndex < 0) {
+      this.onStateChange?.(this.initialState);
+      this.setStatus('ready');
+    } else {
+      const step = this.trace.steps[this.currentIndex];
+      if (step) {
+        this.onStateChange?.(cloneVizState(step.state));
+      }
+      if (this.currentIndex >= this.trace.steps.length - 1) {
+        this.setStatus('ended');
+      } else {
+        this.setStatus('paused');
+      }
     }
   }
 

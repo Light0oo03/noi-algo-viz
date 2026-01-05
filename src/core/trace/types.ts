@@ -16,6 +16,8 @@ export interface VizState {
   edgeStates: Record<string, EdgeVizState>;
   queue: NodeId[];
   note: string;
+  /** 当前高亮的代码行范围 [startLine, endLine]，行号从 1 开始 */
+  highlightLines?: [number, number];
 }
 
 /** BFS 步骤类型 */
@@ -70,5 +72,6 @@ export function cloneVizState(state: VizState): VizState {
     edgeStates: { ...state.edgeStates },
     queue: [...state.queue],
     note: state.note,
+    highlightLines: state.highlightLines ? [...state.highlightLines] as [number, number] : undefined,
   };
 }

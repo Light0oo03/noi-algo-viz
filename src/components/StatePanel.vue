@@ -73,7 +73,7 @@ function stateText(st: NodeVizState) {
 .section-title {
   font-size: 12px;
   font-weight: 600;
-  color: #9fb0c0;
+  color: var(--muted);
 }
 
 .collapsible .section-title {
@@ -82,16 +82,16 @@ function stateText(st: NodeVizState) {
 }
 
 .collapsible .section-title:hover {
-  color: #e6edf3;
+  color: var(--text);
 }
 
 .note {
   padding: 8px;
-  background: #0f172a;
-  border: 1px solid #1f2a37;
+  background: rgba(236, 253, 245, 0.7);
+  border: 1px solid var(--border);
   border-radius: 6px;
   white-space: pre-wrap;
-  color: #cbd5e1;
+  color: var(--text);
   font-size: 11px;
   line-height: 1.4;
 }
@@ -112,7 +112,7 @@ function stateText(st: NodeVizState) {
 }
 
 .empty {
-  color: #6b7280;
+  color: var(--muted-2);
   font-size: 11px;
 }
 
@@ -127,13 +127,14 @@ function stateText(st: NodeVizState) {
   align-items: center;
   gap: 4px;
   padding: 2px 6px;
-  background: #111827;
+  background: rgba(220, 252, 231, 0.6);
+  border: 1px solid rgba(16, 185, 129, 0.18);
   border-radius: 4px;
   font-size: 11px;
 }
 
 .k {
-  color: #cbd5e1;
+  color: var(--text);
   font-weight: 600;
 }
 
@@ -144,8 +145,8 @@ function stateText(st: NodeVizState) {
 }
 
 .v.default {
-  background: #374151;
-  color: #9ca3af;
+  background: rgba(6, 95, 70, 0.12);
+  color: rgba(6, 95, 70, 0.8);
 }
 
 .v.frontier {

@@ -28,7 +28,8 @@
       <button @click="$emit('stepBack')" :disabled="currentStep <= 0 || status === 'playing'">上一步</button>
       <button @click="onPlayPause">{{ status === 'playing' ? '暂停' : '播放' }}</button>
       <button @click="$emit('step')" :disabled="status === 'ended'">下一步</button>
-      <button @click="$emit('reset')">重置</button>
+      <button @click="$emit('reset')">重置动画</button>
+      <button class="reset-graph-btn" @click="$emit('resetGraph')">恢复默认图</button>
 
       <div class="status">状态：{{ statusLabel }}</div>
     </div>
@@ -51,6 +52,7 @@ const emit = defineEmits<{
   (e: 'step'): void;
   (e: 'stepBack'): void;
   (e: 'reset'): void;
+  (e: 'resetGraph'): void;
   (e: 'goToStep', step: number): void;
   (e: 'update:selectedAlgo', algo: string): void;
 }>();
@@ -104,7 +106,8 @@ function onPlayPause() {
 
 .progress-bar {
   height: 12px;
-  background: #1f2a37;
+  background: rgba(6, 95, 70, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.2);
   border-radius: 6px;
   overflow: hidden;
   position: relative;
@@ -124,8 +127,7 @@ function onPlayPause() {
   transform: translate(-50%, -50%);
   font-size: 10px;
   font-weight: 600;
-  color: #e6edf3;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  color: var(--text);
 }
 
 .progress-slider {
@@ -146,9 +148,9 @@ function onPlayPause() {
 }
 
 .algo-select {
-  background: #111827;
-  color: #e6edf3;
-  border: 1px solid #334155;
+  background: var(--panel-solid);
+  color: var(--text);
+  border: 1px solid var(--border);
   padding: 8px 10px;
   border-radius: 8px;
   cursor: pointer;
@@ -156,20 +158,31 @@ function onPlayPause() {
 }
 
 button {
-  background: #111827;
-  color: #e6edf3;
-  border: 1px solid #334155;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: 1px solid var(--btn-border);
   padding: 8px 10px;
   border-radius: 8px;
   cursor: pointer;
+}
+button:hover {
+  border-color: var(--border-strong);
 }
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+.reset-graph-btn {
+  background: rgba(234, 88, 12, 0.12);
+  border-color: rgba(234, 88, 12, 0.4);
+  color: #9a3412;
+}
+.reset-graph-btn:hover {
+  background: rgba(234, 88, 12, 0.16);
+}
 .status {
   margin-left: auto;
   font-size: 12px;
-  color: #9fb0c0;
+  color: var(--muted-2);
 }
 </style>

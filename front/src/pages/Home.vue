@@ -6,83 +6,124 @@
         <span class="logo-text">Light03</span>
       </div>
       <nav class="home-nav">
-        <span class="nav-item nav-item--action" @click="goPlayground">算法可视化</span>
-        <span class="nav-item nav-item--action">算法编辑器</span>
+        <span class="nav-item nav-item--action" @click="goPlayground">{{ t.nav.visual }}</span>
+        <span class="nav-item nav-item--action">{{ t.nav.editor }}</span>
       </nav>
       <div class="home-actions">
+        <div class="lang-switch">
+          <el-button
+            size="small"
+            :type="locale === 'zh' ? 'primary' : 'default'"
+            class="lang-btn"
+            plain
+            @click="setLocale('zh')"
+          >
+            中文
+          </el-button>
+          <el-button
+            size="small"
+            :type="locale === 'en' ? 'primary' : 'default'"
+            class="lang-btn"
+            plain
+            @click="setLocale('en')"
+          >
+            EN
+          </el-button>
+        </div>
         <template v-if="auth.isAuthed">
           <span class="auth-user">{{ auth.user?.email }}</span>
-          <el-button size="small" type="primary" @click="onLogout">退出</el-button>
+          <el-button size="small" type="primary" @click="onLogout">{{ t.actions.logout }}</el-button>
         </template>
         <template v-else>
-          <el-button size="small" type="primary" @click="authDialogOpen = true">登录/注册</el-button>
+          <el-button size="small" type="primary" @click="authDialogOpen = true">
+            {{ t.actions.login }}
+          </el-button>
         </template>
-        <el-button class="ghost-btn" plain @click="goPlayground">进入可视化</el-button>
+        <el-button class="ghost-btn" plain @click="goPlayground">{{ t.actions.enter }}</el-button>
       </div>
     </header>
 
     <main class="hero">
-      <div class="hero-title">
-        学习算法，<span class="hero-highlight">更高效</span>
-      </div>
-      <div class="hero-sub">
-        将每行代码执行时的数据结构以动画形式展示，可将指针变化、递归等抽象过程转化为直观的动画
-      </div>
-      <div class="hero-visual" aria-hidden="true">
-        <div class="algo-orbit">
-          <span class="orbit-ring" />
-          <span class="orbit-dot dot-1" />
-          <span class="orbit-dot dot-2" />
-          <span class="orbit-dot dot-3" />
-        </div>
-        <div class="algo-chips">
-          <span class="algo-chip chip-1">BFS</span>
-          <span class="algo-chip chip-2">DFS</span>
-          <span class="algo-chip chip-3">Dijkstra</span>
-          <span class="algo-chip chip-4">DP</span>
-          <span class="algo-chip chip-5">Sort</span>
-          <span class="algo-chip chip-6">Trie</span>
-        </div>
-        <div class="scan-track">
-          <span class="scan-line" />
-          <span class="scan-node node-1" />
-          <span class="scan-node node-2" />
-          <span class="scan-node node-3" />
-        </div>
-      </div>
-      <div class="hero-actions">
-        <el-button class="primary-btn" type="primary" @click="goPlayground">60+算法动画/含代码</el-button>
-      </div>
-      <div class="hero-tabs">
-        <span
-          v-for="tab in algoTabs"
-          :key="tab.key"
-          class="tab"
-          :class="{ active: tab.key === activeTabKey }"
-          @click="onTabClick(tab.key)"
-        >
-          {{ tab.title }}
-        </span>
-      </div>
-      <div class="tab-panel" ref="tabPanelRef">
-        <div class="tab-panel-inner">
-          <div class="tab-panel-title">{{ activeTab?.title }}</div>
-          <div class="tab-panel-desc">{{ activeTab?.desc }}</div>
-          <div class="tab-panel-tags">
-            <span v-for="item in activeTab?.tags" :key="item" class="tag">
-              {{ item }}
-            </span>
+      <section class="hero-layout">
+        <div class="hero-content">
+          <div class="hero-badge">{{ t.hero.badge }}</div>
+          <div class="hero-title">
+            {{ t.hero.titlePrefix }}
+            <span class="hero-highlight">{{ t.hero.titleHighlight }}</span>
+            {{ t.hero.titleSuffix }}
+          </div>
+          <div class="hero-sub">{{ t.hero.sub }}</div>
+          <div class="hero-actions">
+            <el-button class="primary-btn" type="primary" @click="goPlayground">
+              {{ t.actions.primary }}
+            </el-button>
+            <el-button class="secondary-btn" type="info" plain @click="authDialogOpen = true">
+              {{ t.actions.secondary }}
+            </el-button>
+          </div>
+          <div class="hero-metrics">
+            <div v-for="metric in t.metrics" :key="metric.label" class="metric">
+              <div class="metric-value">{{ metric.value }}</div>
+              <div class="metric-label">{{ metric.label }}</div>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="preview">
+        <div class="hero-visual" aria-hidden="true">
+          <div class="algo-orbit">
+            <span class="orbit-ring" />
+            <span class="orbit-dot dot-1" />
+            <span class="orbit-dot dot-2" />
+            <span class="orbit-dot dot-3" />
+          </div>
+          <div class="algo-chips">
+            <span v-for="(chip, index) in t.visual.chips" :key="chip" class="algo-chip" :class="`chip-${index + 1}`">
+              {{ chip }}
+            </span>
+          </div>
+          <div class="scan-track">
+            <span class="scan-line" />
+            <span class="scan-node node-1" />
+            <span class="scan-node node-2" />
+            <span class="scan-node node-3" />
+          </div>
+        </div>
+      </section>
+
+      <section class="modules">
+        <div class="section-head">
+          <div class="section-title">{{ t.modules.title }}</div>
+          <div class="section-sub">{{ t.modules.subtitle }}</div>
+        </div>
+        <div class="hero-tabs">
+          <span
+            v-for="tab in algoTabs"
+            :key="tab.key"
+            class="tab"
+            :class="{ active: tab.key === activeTabKey }"
+            @click="onTabClick(tab.key)"
+          >
+            {{ tab.title }}
+          </span>
+        </div>
+        <div class="tab-panel" ref="tabPanelRef">
+          <div class="tab-panel-inner">
+            <div class="tab-panel-title">{{ activeTab?.title }}</div>
+            <div class="tab-panel-desc">{{ activeTab?.desc }}</div>
+            <div class="tab-panel-tags">
+              <span v-for="item in activeTab?.tags" :key="item" class="tag">
+                {{ item }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="preview">
         <el-card class="preview-card">
-          <div class="preview-title">NOI 算法可视化学习平台</div>
-          <div class="preview-sub">从基础数据结构到复杂图算法，一站式学习与演练。</div>
+          <div class="preview-title">{{ previewCards[0]?.title }}</div>
+          <div class="preview-sub">{{ previewCards[0]?.desc }}</div>
           <div class="preview-footer">
-            <span>浅绿色风格</span>
-            <span>交互式动画</span>
-            <span>代码同步</span>
+            <span v-for="item in previewCards[0]?.points ?? []" :key="item">{{ item }}</span>
           </div>
         </el-card>
         <el-card class="preview-card image">
@@ -91,24 +132,25 @@
             <div class="dot" />
             <div class="dot" />
           </div>
-          <div class="image-caption">示意图预览区域</div>
+          <div class="image-caption">{{ previewCards[1]?.title }}</div>
+          <div class="image-sub">{{ previewCards[1]?.desc }}</div>
         </el-card>
-      </div>
+      </section>
     </main>
 
-    <el-dialog v-model="authDialogOpen" title="登录 / 注册" width="360px">
+    <el-dialog v-model="authDialogOpen" :title="t.auth.title" width="360px">
       <el-form label-position="top" class="auth-form">
-        <el-form-item label="邮箱">
-          <el-input v-model="authEmail" placeholder="请输入邮箱" />
+        <el-form-item :label="t.auth.emailLabel">
+          <el-input v-model="authEmail" :placeholder="t.auth.emailPlaceholder" />
         </el-form-item>
-        <el-form-item label="密码">
-          <el-input v-model="authPassword" placeholder="至少 8 位" show-password type="password" />
+        <el-form-item :label="t.auth.passwordLabel">
+          <el-input v-model="authPassword" :placeholder="t.auth.passwordPlaceholder" show-password type="password" />
         </el-form-item>
       </el-form>
       <el-alert v-if="authError" class="auth-error" type="error" :closable="false" :title="authError" />
       <template #footer>
-        <el-button @click="onRegister">注册</el-button>
-        <el-button type="primary" @click="onLogin">登录</el-button>
+        <el-button @click="onRegister">{{ t.auth.register }}</el-button>
+        <el-button type="primary" @click="onLogin">{{ t.auth.login }}</el-button>
       </template>
     </el-dialog>
   </div>
@@ -134,56 +176,239 @@ let gsapCtx: gsap.Context | null = null;
 let autoRotateTimer: number | null = null;
 let handleKeydown: ((event: KeyboardEvent) => void) | null = null;
 
-const algoTabs = [
-  {
-    key: 'linked-list',
-    title: '链表',
-    desc:
-      '链表通过节点与指针连接数据，支持高效的插入与删除；理解头结点、尾结点与指针移动是关键。',
-    tags: ['头插法', '尾插法', '双向链表', '快慢指针'],
+type Locale = 'zh' | 'en';
+
+const locale = ref<Locale>('zh');
+const copy = {
+  zh: {
+    nav: {
+      visual: '算法可视化',
+      editor: '算法编辑器',
+    },
+    actions: {
+      login: '登录/注册',
+      logout: '退出',
+      enter: '进入可视化',
+      primary: '立即体验可视化',
+      secondary: '登录以保存进度',
+    },
+    hero: {
+      badge: '教育平台 · 算法可视化',
+      titlePrefix: '让算法学习更',
+      titleHighlight: '直观',
+      titleSuffix: '与系统',
+      sub: '将代码执行过程与数据结构变化实时映射为动画，帮助学生理解指针、递归与复杂状态转移。',
+    },
+    metrics: [
+      { value: '60+', label: '算法动画' },
+      { value: '8+', label: '数据结构' },
+      { value: '100+', label: '可视步骤' },
+    ],
+    visual: {
+      chips: ['BFS', 'DFS', 'Dijkstra', 'DP', 'Sort', 'Trie'],
+    },
+    modules: {
+      title: '算法模块速览',
+      subtitle: '点击模块查看核心概念与学习重点，课程内容可持续扩展。',
+      tabs: [
+        {
+          key: 'linked-list',
+          title: '链表',
+          desc: '链表通过节点与指针连接数据，支持高效的插入与删除；理解头尾指针与遍历方式是关键。',
+          tags: ['头插法', '尾插法', '双向链表', '快慢指针'],
+        },
+        {
+          key: 'stack',
+          title: '栈',
+          desc: '栈遵循后进先出（LIFO），常用于函数调用、括号匹配与路径回溯等场景。',
+          tags: ['入栈/出栈', '括号匹配', '表达式求值', '单调栈'],
+        },
+        {
+          key: 'queue',
+          title: '队列',
+          desc: '队列遵循先进先出（FIFO），适合层序遍历、任务调度与异步队列的建模。',
+          tags: ['循环队列', '双端队列', '层序遍历', 'BFS'],
+        },
+        {
+          key: 'tree',
+          title: '树',
+          desc: '树结构描述层级关系，掌握遍历方式与节点关系是理解二叉树与搜索树的核心。',
+          tags: ['前中后序', '二叉搜索树', '堆', '线段树'],
+        },
+        {
+          key: 'graph',
+          title: '图',
+          desc: '图表示复杂关系网络，掌握 DFS/BFS、最短路与最小生成树是基础能力。',
+          tags: ['DFS/BFS', '最短路', '最小生成树', '拓扑排序'],
+        },
+        {
+          key: 'search',
+          title: '查找',
+          desc: '查找关注如何快速定位目标元素，理解有序数据结构与哈希映射的特性。',
+          tags: ['二分查找', '哈希表', '字符串匹配', '查找优化'],
+        },
+        {
+          key: 'sort',
+          title: '排序',
+          desc: '排序是算法核心模块，比较型与非比较型算法在稳定性与复杂度上各有侧重。',
+          tags: ['快速排序', '归并排序', '计数排序', '稳定性'],
+        },
+      ],
+    },
+    preview: {
+      cards: [
+        {
+          title: '课堂可视化一体化',
+          desc: '从概念讲解到动画演示与代码复现，形成完整的算法学习闭环。',
+          points: ['课堂演示', '分步播放', '代码同步'],
+        },
+        {
+          title: '算法画布预览',
+          desc: '支持节点、边、指针等多种可视化组件，满足教学场景。',
+        },
+      ],
+    },
+    auth: {
+      title: '登录 / 注册',
+      emailLabel: '邮箱',
+      emailPlaceholder: '请输入邮箱',
+      passwordLabel: '密码',
+      passwordPlaceholder: '至少 8 位',
+      register: '注册',
+      login: '登录',
+    },
+    toast: {
+      registerSuccess: '注册成功',
+      loginSuccess: '登录成功',
+      logout: '已退出登录',
+      registerFailed: '注册失败',
+      loginFailed: '登录失败',
+    },
+    errors: {
+      unknown: '未知错误',
+      server: '服务器开小差了，请稍后再试',
+      failed: '操作失败',
+    },
   },
-  {
-    key: 'stack',
-    title: '栈',
-    desc: '栈遵循后进先出（LIFO），常用于函数调用、括号匹配与路径回溯等场景。',
-    tags: ['入栈/出栈', '括号匹配', '表达式求值', '单调栈'],
+  en: {
+    nav: {
+      visual: 'Visualization',
+      editor: 'Algorithm Editor',
+    },
+    actions: {
+      login: 'Sign in / Register',
+      logout: 'Sign out',
+      enter: 'Enter Playground',
+      primary: 'Start Visualizing',
+      secondary: 'Sign in to save progress',
+    },
+    hero: {
+      badge: 'Education Platform · Algorithm Visualization',
+      titlePrefix: 'Make algorithm learning ',
+      titleHighlight: 'visual',
+      titleSuffix: ' and structured',
+      sub: 'Turn every code step into intuitive animations so students can see pointers, recursion, and state transitions.',
+    },
+    metrics: [
+      { value: '60+', label: 'Algorithm demos' },
+      { value: '8+', label: 'Data structures' },
+      { value: '100+', label: 'Visual steps' },
+    ],
+    visual: {
+      chips: ['BFS', 'DFS', 'Dijkstra', 'DP', 'Sort', 'Trie'],
+    },
+    modules: {
+      title: 'Module highlights',
+      subtitle: 'Click a module to preview core concepts and learning focus.',
+      tabs: [
+        {
+          key: 'linked-list',
+          title: 'Linked List',
+          desc: 'Linked lists connect nodes with pointers and support efficient insertions and deletions.',
+          tags: ['Head insert', 'Tail insert', 'Doubly linked', 'Fast & slow'],
+        },
+        {
+          key: 'stack',
+          title: 'Stack',
+          desc: 'Stacks follow LIFO and are great for call stacks, bracket matching, and backtracking.',
+          tags: ['Push/Pop', 'Bracket match', 'Expression eval', 'Monotonic'],
+        },
+        {
+          key: 'queue',
+          title: 'Queue',
+          desc: 'Queues follow FIFO and are ideal for level-order traversal and task scheduling.',
+          tags: ['Circular queue', 'Deque', 'Level order', 'BFS'],
+        },
+        {
+          key: 'tree',
+          title: 'Tree',
+          desc: 'Trees model hierarchical relations; traversals are key to understanding search trees.',
+          tags: ['Traversals', 'BST', 'Heap', 'Segment tree'],
+        },
+        {
+          key: 'graph',
+          title: 'Graph',
+          desc: 'Graphs model networks; learn DFS/BFS, shortest paths, and spanning trees.',
+          tags: ['DFS/BFS', 'Shortest path', 'MST', 'Topological sort'],
+        },
+        {
+          key: 'search',
+          title: 'Search',
+          desc: 'Search focuses on locating targets efficiently using order and hashing.',
+          tags: ['Binary search', 'Hashing', 'String match', 'Optimization'],
+        },
+        {
+          key: 'sort',
+          title: 'Sorting',
+          desc: 'Sorting balances stability and complexity across comparison and non-comparison methods.',
+          tags: ['Quick sort', 'Merge sort', 'Counting sort', 'Stability'],
+        },
+      ],
+    },
+    preview: {
+      cards: [
+        {
+          title: 'Teaching-ready visualization',
+          desc: 'From explanation to animation and code, deliver a complete learning loop.',
+          points: ['Classroom demos', 'Step playback', 'Code sync'],
+        },
+        {
+          title: 'Visualization canvas',
+          desc: 'Nodes, edges, pointers, and more components are ready for learning scenes.',
+        },
+      ],
+    },
+    auth: {
+      title: 'Sign in / Register',
+      emailLabel: 'Email',
+      emailPlaceholder: 'Enter your email',
+      passwordLabel: 'Password',
+      passwordPlaceholder: 'At least 8 characters',
+      register: 'Register',
+      login: 'Sign in',
+    },
+    toast: {
+      registerSuccess: 'Registration successful',
+      loginSuccess: 'Signed in',
+      logout: 'Signed out',
+      registerFailed: 'Registration failed',
+      loginFailed: 'Sign in failed',
+    },
+    errors: {
+      unknown: 'Unknown error',
+      server: 'Server is busy, please try again later',
+      failed: 'Operation failed',
+    },
   },
-  {
-    key: 'queue',
-    title: '队列',
-    desc: '队列遵循先进先出（FIFO），适合层序遍历、任务调度与异步队列的建模。',
-    tags: ['循环队列', '双端队列', '层序遍历', 'BFS'],
-  },
-  {
-    key: 'tree',
-    title: '树',
-    desc: '树结构描述层级关系，掌握遍历方式与节点关系是理解二叉树与搜索树的核心。',
-    tags: ['前中后序', '二叉搜索树', '堆', '线段树'],
-  },
-  {
-    key: 'graph',
-    title: '图',
-    desc: '图表示复杂关系网络，掌握 DFS/BFS、最短路与最小生成树是基础能力。',
-    tags: ['DFS/BFS', '最短路', '最小生成树', '拓扑排序'],
-  },
-  {
-    key: 'search',
-    title: '查找',
-    desc: '查找关注如何快速定位目标元素，理解有序数据结构与哈希映射的特性。',
-    tags: ['二分查找', '哈希表', '字符串匹配', '查找优化'],
-  },
-  {
-    key: 'sort',
-    title: '排序',
-    desc: '排序是算法核心模块，比较型与非比较型算法在稳定性与复杂度上各有侧重。',
-    tags: ['快速排序', '归并排序', '计数排序', '稳定性'],
-  },
-];
-const activeTabKey = ref(algoTabs[0]?.key ?? 'linked-list');
+};
+const t = computed(() => copy[locale.value]);
+const algoTabs = computed(() => t.value.modules.tabs);
+const previewCards = computed(() => t.value.preview.cards);
+const activeTabKey = ref(algoTabs.value[0]?.key ?? 'linked-list');
 const prevTabIndex = ref(0);
 const isTabAnimating = ref(false);
 
-const activeTab = computed(() => algoTabs.find((tab) => tab.key === activeTabKey.value));
+const activeTab = computed(() => algoTabs.value.find((tab) => tab.key === activeTabKey.value));
 
 function goPlayground() {
   void router.push('/playground');
@@ -207,12 +432,12 @@ function clearAuthForm() {
 }
 
 function formatAuthError(e: any): string {
-  if (!e) return '未知错误';
+  if (!e) return t.value.errors.unknown;
   if (e instanceof TypeError && (e.message.includes('fetch') || e.message.includes('Network'))) {
-    return '服务器开小差了，请稍后再试';
+    return t.value.errors.server;
   }
   if (e?.name === 'TypeError' && (e?.message?.includes('fetch') || e?.message?.includes('Network'))) {
-    return '服务器开小差了，请稍后再试';
+    return t.value.errors.server;
   }
   const msg = e?.message ?? e?.reason ?? e?.error ?? e;
   if (Array.isArray(msg)) return msg.join('；');
@@ -220,7 +445,7 @@ function formatAuthError(e: any): string {
   try {
     return JSON.stringify(msg);
   } catch {
-    return '操作失败';
+    return t.value.errors.failed;
   }
 }
 
@@ -228,12 +453,12 @@ async function onRegister() {
   authError.value = '';
   try {
     await auth.register(authEmail.value, authPassword.value);
-    pushToast('success', '注册成功');
+    pushToast('success', t.value.toast.registerSuccess);
     authDialogOpen.value = false;
     clearAuthForm();
   } catch (e: any) {
-    authError.value = formatAuthError(e) || '注册失败';
-    pushToast('error', authError.value || '注册失败');
+    authError.value = formatAuthError(e) || t.value.toast.registerFailed;
+    pushToast('error', authError.value || t.value.toast.registerFailed);
   }
 }
 
@@ -241,18 +466,18 @@ async function onLogin() {
   authError.value = '';
   try {
     await auth.login(authEmail.value, authPassword.value);
-    pushToast('success', '登录成功');
+    pushToast('success', t.value.toast.loginSuccess);
     authDialogOpen.value = false;
     clearAuthForm();
   } catch (e: any) {
-    authError.value = formatAuthError(e) || '登录失败';
-    pushToast('error', authError.value || '登录失败');
+    authError.value = formatAuthError(e) || t.value.toast.loginFailed;
+    pushToast('error', authError.value || t.value.toast.loginFailed);
   }
 }
 
 function onLogout() {
   auth.logout();
-  pushToast('info', '已退出登录');
+  pushToast('info', t.value.toast.logout);
 }
 
 watch(
@@ -271,15 +496,16 @@ function shouldReduceMotion(): boolean {
 }
 
 function getNextTabKey(direction: 1 | -1): string {
-  const currentIndex = algoTabs.findIndex((tab) => tab.key === activeTabKey.value);
-  const nextIndex = (currentIndex + direction + algoTabs.length) % algoTabs.length;
-  return algoTabs[nextIndex]?.key ?? algoTabs[0]?.key ?? 'linked-list';
+  const tabs = algoTabs.value;
+  const currentIndex = tabs.findIndex((tab) => tab.key === activeTabKey.value);
+  const nextIndex = (currentIndex + direction + tabs.length) % tabs.length;
+  return tabs[nextIndex]?.key ?? tabs[0]?.key ?? 'linked-list';
 }
 
 function onTabClick(key: string) {
   if (key === activeTabKey.value || isTabAnimating.value) return;
-  prevTabIndex.value = algoTabs.findIndex((tab) => tab.key === activeTabKey.value);
-  const nextIndex = algoTabs.findIndex((tab) => tab.key === key);
+  prevTabIndex.value = algoTabs.value.findIndex((tab) => tab.key === activeTabKey.value);
+  const nextIndex = algoTabs.value.findIndex((tab) => tab.key === key);
   const direction = nextIndex >= prevTabIndex.value ? 1 : -1;
 
   if (shouldReduceMotion() || !tabPanelRef.value) {
@@ -312,6 +538,10 @@ function onTabClick(key: string) {
   });
 }
 
+function setLocale(next: Locale) {
+  locale.value = next;
+}
+
 onMounted(() => {
   if (!homeRef.value) return;
   if (!shouldReduceMotion()) {
@@ -321,11 +551,15 @@ onMounted(() => {
       });
 
       tl.from('.home-header', { y: -16, opacity: 0, duration: 0.6 })
-        .from('.hero-title', { y: 16, opacity: 0, duration: 0.6 }, '-=0.35')
+        .from('.hero-badge', { y: 10, opacity: 0, duration: 0.45 }, '-=0.35')
+        .from('.hero-title', { y: 16, opacity: 0, duration: 0.6 }, '-=0.3')
         .from('.hero-sub', { y: 12, opacity: 0, duration: 0.5 }, '-=0.35')
         .from('.hero-visual', { scale: 0.98, opacity: 0, duration: 0.6 }, '-=0.25')
         .from('.hero-actions', { y: 16, opacity: 0, duration: 0.5 }, '-=0.3')
-        .from('.hero-tabs .tab', { y: 8, opacity: 0, duration: 0.4, stagger: 0.06 }, '-=0.2')
+        .from('.hero-metrics .metric', { y: 10, opacity: 0, duration: 0.4, stagger: 0.08 }, '-=0.2')
+        .from('.section-head', { y: 12, opacity: 0, duration: 0.45 }, '-=0.2')
+        .from('.hero-tabs .tab', { y: 8, opacity: 0, duration: 0.4, stagger: 0.06 }, '-=0.25')
+        .from('.tab-panel', { y: 12, opacity: 0, duration: 0.45 }, '-=0.2')
         .from('.preview-card', { y: 20, opacity: 0, duration: 0.55, stagger: 0.12 }, '-=0.25');
 
       gsap.to('.algo-orbit', { rotate: 360, duration: 18, repeat: -1, ease: 'none' });
@@ -428,6 +662,7 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
+  gap: 16px;
 }
 .logo {
   display: flex;
@@ -486,6 +721,19 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.lang-switch {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.08);
+  border: 1px solid rgba(15, 118, 110, 0.16);
+}
+.lang-btn {
+  border-radius: 999px;
 }
 .ghost-btn {
   border-radius: 999px;
@@ -499,15 +747,36 @@ onBeforeUnmount(() => {
   margin-top: 6px;
 }
 .hero {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 70px 24px 80px;
-  text-align: center;
+  padding: 70px 24px 90px;
+}
+.hero-layout {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 40px;
+  align-items: center;
+}
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.hero-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #0f766e;
+  background: rgba(15, 118, 110, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.2);
 }
 .hero-title {
-  font-size: 44px;
+  font-size: 42px;
   font-weight: 700;
-  letter-spacing: 1px;
+  line-height: 1.2;
+  letter-spacing: 0.4px;
 }
 .hero-highlight {
   color: #8b5cf6;
@@ -516,16 +785,20 @@ onBeforeUnmount(() => {
   border-radius: 12px;
 }
 .hero-sub {
-  margin-top: 18px;
   font-size: 14px;
   color: var(--muted);
   line-height: 1.8;
 }
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
 .hero-visual {
   position: relative;
-  margin: 26px auto 10px;
-  width: min(680px, 92vw);
-  height: 160px;
+  width: min(520px, 92vw);
+  height: 220px;
   border-radius: 24px;
   background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(59, 130, 246, 0.12));
   border: 1px solid rgba(148, 163, 184, 0.3);
@@ -568,7 +841,7 @@ onBeforeUnmount(() => {
 }
 .algo-chips {
   position: absolute;
-  inset: 20px 24px auto auto;
+  inset: 24px 24px auto auto;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
@@ -587,7 +860,7 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 24px;
   right: 24px;
-  bottom: 26px;
+  bottom: 32px;
   height: 10px;
   border-radius: 999px;
   background: rgba(148, 163, 184, 0.2);
@@ -620,28 +893,62 @@ onBeforeUnmount(() => {
 .scan-node.node-3 {
   left: 78%;
 }
-.hero-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin: 28px 0 30px;
-}
 .primary-btn {
   border-radius: 10px;
   box-shadow: 0 10px 20px rgba(37, 99, 235, 0.25);
 }
 .secondary-btn {
   border-radius: 10px;
-  background: #111827;
-  border-color: #111827;
-  color: #f9fafb;
+  border-color: rgba(15, 118, 110, 0.25);
+  color: #0f766e;
+  background: rgba(255, 255, 255, 0.85);
+}
+.hero-metrics {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.metric {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 10px 22px rgba(15, 118, 110, 0.08);
+}
+.metric-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f766e;
+}
+.metric-label {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.modules {
+  margin-top: 40px;
+}
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f766e;
+}
+.section-sub {
+  font-size: 13px;
+  color: var(--muted);
 }
 .hero-tabs {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 38px;
+  margin-bottom: 18px;
 }
 .tab {
   padding: 6px 14px;
@@ -670,8 +977,8 @@ onBeforeUnmount(() => {
   transform: none;
 }
 .tab-panel {
-  margin: 0 auto 36px;
-  max-width: 720px;
+  margin: 0 0 36px;
+  max-width: 760px;
   text-align: left;
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(15, 118, 110, 0.15);
@@ -708,7 +1015,7 @@ onBeforeUnmount(() => {
 .preview {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 22px;
   align-items: stretch;
 }
 .preview-card {
@@ -724,6 +1031,7 @@ onBeforeUnmount(() => {
 .preview-card.image {
   display: grid;
   place-items: center;
+  text-align: center;
 }
 .preview-title {
   font-size: 16px;
@@ -740,6 +1048,11 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.image-sub {
+  margin-top: 6px;
   font-size: 12px;
   color: var(--muted);
 }
@@ -770,8 +1083,37 @@ onBeforeUnmount(() => {
     flex-direction: column;
     gap: 10px;
   }
+  .home-actions {
+    justify-content: center;
+  }
+  .home-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
   .hero {
     padding-top: 40px;
+  }
+  .hero-layout {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .hero-content {
+    align-items: center;
+  }
+  .hero-badge {
+    align-self: center;
+  }
+  .hero-actions {
+    justify-content: center;
+  }
+  .hero-metrics {
+    justify-content: center;
+  }
+  .hero-tabs {
+    justify-content: center;
+  }
+  .tab-panel {
+    margin: 0 auto 30px;
   }
   .preview {
     grid-template-columns: 1fr;

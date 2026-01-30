@@ -52,16 +52,28 @@
       </div>
       <div class="hero-actions">
         <el-button class="primary-btn" type="primary" @click="goPlayground">60+算法动画/含代码</el-button>
-        <el-button class="secondary-btn" type="info">自定义代码转动画</el-button>
       </div>
       <div class="hero-tabs">
-        <span class="tab active">链表</span>
-        <span class="tab">栈</span>
-        <span class="tab">队列</span>
-        <span class="tab">树</span>
-        <span class="tab">图</span>
-        <span class="tab">查找</span>
-        <span class="tab">排序</span>
+        <span
+          v-for="tab in algoTabs"
+          :key="tab.key"
+          class="tab"
+          :class="{ active: tab.key === activeTabKey }"
+          @click="onTabClick(tab.key)"
+        >
+          {{ tab.title }}
+        </span>
+      </div>
+      <div class="tab-panel" ref="tabPanelRef">
+        <div class="tab-panel-inner">
+          <div class="tab-panel-title">{{ activeTab?.title }}</div>
+          <div class="tab-panel-desc">{{ activeTab?.desc }}</div>
+          <div class="tab-panel-tags">
+            <span v-for="item in activeTab?.tags" :key="item" class="tag">
+              {{ item }}
+            </span>
+          </div>
+        </div>
       </div>
       <div class="preview">
         <el-card class="preview-card">
@@ -103,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { gsap } from 'gsap';
@@ -117,7 +129,61 @@ const authEmail = ref<string>('');
 const authPassword = ref<string>('');
 const authError = ref<string>('');
 const homeRef = ref<HTMLElement | null>(null);
+const tabPanelRef = ref<HTMLElement | null>(null);
 let gsapCtx: gsap.Context | null = null;
+let autoRotateTimer: number | null = null;
+let handleKeydown: ((event: KeyboardEvent) => void) | null = null;
+
+const algoTabs = [
+  {
+    key: 'linked-list',
+    title: '链表',
+    desc:
+      '链表通过节点与指针连接数据，支持高效的插入与删除；理解头结点、尾结点与指针移动是关键。',
+    tags: ['头插法', '尾插法', '双向链表', '快慢指针'],
+  },
+  {
+    key: 'stack',
+    title: '栈',
+    desc: '栈遵循后进先出（LIFO），常用于函数调用、括号匹配与路径回溯等场景。',
+    tags: ['入栈/出栈', '括号匹配', '表达式求值', '单调栈'],
+  },
+  {
+    key: 'queue',
+    title: '队列',
+    desc: '队列遵循先进先出（FIFO），适合层序遍历、任务调度与异步队列的建模。',
+    tags: ['循环队列', '双端队列', '层序遍历', 'BFS'],
+  },
+  {
+    key: 'tree',
+    title: '树',
+    desc: '树结构描述层级关系，掌握遍历方式与节点关系是理解二叉树与搜索树的核心。',
+    tags: ['前中后序', '二叉搜索树', '堆', '线段树'],
+  },
+  {
+    key: 'graph',
+    title: '图',
+    desc: '图表示复杂关系网络，掌握 DFS/BFS、最短路与最小生成树是基础能力。',
+    tags: ['DFS/BFS', '最短路', '最小生成树', '拓扑排序'],
+  },
+  {
+    key: 'search',
+    title: '查找',
+    desc: '查找关注如何快速定位目标元素，理解有序数据结构与哈希映射的特性。',
+    tags: ['二分查找', '哈希表', '字符串匹配', '查找优化'],
+  },
+  {
+    key: 'sort',
+    title: '排序',
+    desc: '排序是算法核心模块，比较型与非比较型算法在稳定性与复杂度上各有侧重。',
+    tags: ['快速排序', '归并排序', '计数排序', '稳定性'],
+  },
+];
+const activeTabKey = ref(algoTabs[0]?.key ?? 'linked-list');
+const prevTabIndex = ref(0);
+const isTabAnimating = ref(false);
+
+const activeTab = computed(() => algoTabs.find((tab) => tab.key === activeTabKey.value));
 
 function goPlayground() {
   void router.push('/playground');
@@ -198,75 +264,149 @@ watch(
   }
 );
 
+function shouldReduceMotion(): boolean {
+  return typeof window !== 'undefined'
+    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    : false;
+}
+
+function getNextTabKey(direction: 1 | -1): string {
+  const currentIndex = algoTabs.findIndex((tab) => tab.key === activeTabKey.value);
+  const nextIndex = (currentIndex + direction + algoTabs.length) % algoTabs.length;
+  return algoTabs[nextIndex]?.key ?? algoTabs[0]?.key ?? 'linked-list';
+}
+
+function onTabClick(key: string) {
+  if (key === activeTabKey.value || isTabAnimating.value) return;
+  prevTabIndex.value = algoTabs.findIndex((tab) => tab.key === activeTabKey.value);
+  const nextIndex = algoTabs.findIndex((tab) => tab.key === key);
+  const direction = nextIndex >= prevTabIndex.value ? 1 : -1;
+
+  if (shouldReduceMotion() || !tabPanelRef.value) {
+    activeTabKey.value = key;
+    return;
+  }
+
+  isTabAnimating.value = true;
+  gsap.to(tabPanelRef.value, {
+    x: -34 * direction,
+    opacity: 0,
+    duration: 0.22,
+    ease: 'power1.in',
+    onComplete: () => {
+      activeTabKey.value = key;
+      gsap.fromTo(
+        tabPanelRef.value,
+        { x: 34 * direction, opacity: 0 },
+        {
+          x: 0,
+          opacity: 1,
+          duration: 0.34,
+          ease: 'power2.out',
+          onComplete: () => {
+            isTabAnimating.value = false;
+          },
+        }
+      );
+    },
+  });
+}
+
 onMounted(() => {
   if (!homeRef.value) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!shouldReduceMotion()) {
+    gsapCtx = gsap.context((self) => {
+      const tl = gsap.timeline({
+        defaults: { ease: 'power2.out' },
+      });
 
-  gsapCtx = gsap.context((self) => {
-    const tl = gsap.timeline({
-      defaults: { ease: 'power2.out' },
-    });
+      tl.from('.home-header', { y: -16, opacity: 0, duration: 0.6 })
+        .from('.hero-title', { y: 16, opacity: 0, duration: 0.6 }, '-=0.35')
+        .from('.hero-sub', { y: 12, opacity: 0, duration: 0.5 }, '-=0.35')
+        .from('.hero-visual', { scale: 0.98, opacity: 0, duration: 0.6 }, '-=0.25')
+        .from('.hero-actions', { y: 16, opacity: 0, duration: 0.5 }, '-=0.3')
+        .from('.hero-tabs .tab', { y: 8, opacity: 0, duration: 0.4, stagger: 0.06 }, '-=0.2')
+        .from('.preview-card', { y: 20, opacity: 0, duration: 0.55, stagger: 0.12 }, '-=0.25');
 
-    tl.from('.home-header', { y: -16, opacity: 0, duration: 0.6 })
-      .from('.hero-title', { y: 16, opacity: 0, duration: 0.6 }, '-=0.35')
-      .from('.hero-sub', { y: 12, opacity: 0, duration: 0.5 }, '-=0.35')
-      .from('.hero-visual', { scale: 0.98, opacity: 0, duration: 0.6 }, '-=0.25')
-      .from('.hero-actions', { y: 16, opacity: 0, duration: 0.5 }, '-=0.3')
-      .from('.hero-tabs .tab', { y: 8, opacity: 0, duration: 0.4, stagger: 0.06 }, '-=0.2')
-      .from('.preview-card', { y: 20, opacity: 0, duration: 0.55, stagger: 0.12 }, '-=0.25');
-
-    gsap.to('.algo-orbit', { rotate: 360, duration: 18, repeat: -1, ease: 'none' });
-    gsap.to('.orbit-dot', {
-      scale: 1.25,
-      opacity: 1,
-      duration: 1.6,
-      stagger: 0.4,
-      repeat: -1,
-      yoyo: true,
-      ease: 'sine.inOut',
-    });
-
-    const chips = self.selector?.('.algo-chip') ?? [];
-    chips.forEach((chip: Element, index: number) => {
-      gsap.to(chip, {
-        y: 8 + (index % 3) * 4,
-        x: index % 2 === 0 ? 6 : -6,
-        duration: 2.4 + index * 0.2,
+      gsap.to('.algo-orbit', { rotate: 360, duration: 18, repeat: -1, ease: 'none' });
+      gsap.to('.orbit-dot', {
+        scale: 1.25,
+        opacity: 1,
+        duration: 1.6,
+        stagger: 0.4,
         repeat: -1,
         yoyo: true,
         ease: 'sine.inOut',
       });
-      gsap.to(chip, {
-        rotate: index % 2 === 0 ? 2 : -2,
-        duration: 3.2 + index * 0.15,
+
+      const chips = self.selector?.('.algo-chip') ?? [];
+      chips.forEach((chip: Element, index: number) => {
+        gsap.to(chip, {
+          y: 8 + (index % 3) * 4,
+          x: index % 2 === 0 ? 6 : -6,
+          duration: 2.4 + index * 0.2,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+        });
+        gsap.to(chip, {
+          rotate: index % 2 === 0 ? 2 : -2,
+          duration: 3.2 + index * 0.15,
+          repeat: -1,
+          yoyo: true,
+          ease: 'sine.inOut',
+        });
+      });
+
+      gsap.to('.scan-line', {
+        x: 220,
+        duration: 2.8,
         repeat: -1,
         yoyo: true,
         ease: 'sine.inOut',
       });
-    });
+      gsap.to('.scan-node', {
+        scale: 1.2,
+        opacity: 1,
+        duration: 1.4,
+        stagger: 0.3,
+        repeat: -1,
+        yoyo: true,
+        ease: 'sine.inOut',
+      });
+    }, homeRef.value);
+  }
 
-    gsap.to('.scan-line', {
-      x: 220,
-      duration: 2.8,
-      repeat: -1,
-      yoyo: true,
-      ease: 'sine.inOut',
-    });
-    gsap.to('.scan-node', {
-      scale: 1.2,
-      opacity: 1,
-      duration: 1.4,
-      stagger: 0.3,
-      repeat: -1,
-      yoyo: true,
-      ease: 'sine.inOut',
-    });
-  }, homeRef.value);
+  handleKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'ArrowRight') {
+      onTabClick(getNextTabKey(1));
+    }
+    if (event.key === 'ArrowLeft') {
+      onTabClick(getNextTabKey(-1));
+    }
+  };
+  window.addEventListener('keydown', handleKeydown);
+
+  if (!shouldReduceMotion()) {
+    autoRotateTimer = window.setInterval(() => {
+      if (!isTabAnimating.value) {
+        onTabClick(getNextTabKey(1));
+      }
+    }, 5500);
+  }
 });
 
 onBeforeUnmount(() => {
   gsapCtx?.revert();
   gsapCtx = null;
+  if (handleKeydown) {
+    window.removeEventListener('keydown', handleKeydown);
+    handleKeydown = null;
+  }
+  if (autoRotateTimer) {
+    window.clearInterval(autoRotateTimer);
+    autoRotateTimer = null;
+  }
 });
 </script>
 
@@ -510,11 +650,60 @@ onBeforeUnmount(() => {
   border: 1px solid var(--border);
   color: var(--muted);
   background: rgba(255, 255, 255, 0.7);
+  transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease, transform 0.15s ease,
+    box-shadow 0.18s ease;
+}
+.tab:hover {
+  color: #0f766e;
+  border-color: rgba(15, 118, 110, 0.35);
+  background: rgba(15, 118, 110, 0.08);
+  box-shadow: 0 8px 16px rgba(15, 118, 110, 0.12);
+  transform: translateY(-1px);
 }
 .tab.active {
   background: #111827;
   color: #fff;
   border-color: #111827;
+}
+.tab.active:hover {
+  box-shadow: none;
+  transform: none;
+}
+.tab-panel {
+  margin: 0 auto 36px;
+  max-width: 720px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(15, 118, 110, 0.15);
+  border-radius: 18px;
+  padding: 18px 22px;
+  box-shadow: 0 12px 24px rgba(15, 118, 110, 0.08);
+  overflow: hidden;
+}
+.tab-panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f766e;
+}
+.tab-panel-desc {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.tab-panel-tags {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tab-panel-tags .tag {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  color: #2563eb;
+  background: rgba(59, 130, 246, 0.08);
 }
 .preview {
   display: grid;

@@ -1,7 +1,7 @@
 <template>
-  <AlgoPlayground />
+  <RouterView />
 </template>
 
 <script setup lang="ts">
-import AlgoPlayground from './pages/AlgoPlayground.vue';
+import { RouterView } from 'vue-router';
 </script>

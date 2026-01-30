@@ -116,7 +116,7 @@ watch(
 .code-content {
   flex: 1;
   overflow: auto;
-  padding: 6px 0;
+  padding: 10px 0 6px;
 }
 
 pre {
@@ -131,15 +131,21 @@ code {
 .code-line {
   display: block;
   padding: 0 6px 0 0;
-  line-height: 1.3;
+  line-height: 1px;
+  position: relative;
   transition: background-color 0.3s ease;
 }
 
-.code-line.highlighted {
-  background: rgba(34, 197, 94, 0.12);
-  border: 1px dashed rgba(34, 197, 94, 0.5);
+.code-line.highlighted::before {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+  background: rgba(34, 197, 94, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.5);
   border-left: 3px solid #22c55e;
-  margin: -1px 0;
+  border-radius: 2px;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .line-number {
@@ -148,14 +154,18 @@ code {
   padding-right: 6px;
   text-align: right;
   color: rgba(6, 95, 70, 0.45);
-  font-size: 11px;
+  font-size: 12px;
   user-select: none;
+  position: relative;
+  z-index: 1;
 }
 
 .line-content {
   color: var(--text);
-  font-size: 12px;
+  font-size: 14px;
   white-space: pre;
+  position: relative;
+  z-index: 1;
 }
 
 .code-line.highlighted .line-number {

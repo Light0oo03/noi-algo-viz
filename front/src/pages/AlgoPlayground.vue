@@ -1,35 +1,60 @@
 <template>
-  <div class="page">
-    <div class="toast-wrap" aria-live="polite" aria-atomic="true">
-      <div v-for="t in toasts" :key="t.id" :class="['toast', t.kind]">
-        {{ t.text }}
+  <el-container class="page">
+    <el-header class="header">
+      <div class="title-row">
+        <div class="title">NOI 算法可视化学习平台（MVP）</div>
+        <el-button class="ghost-btn" size="small" plain @click="goHome">返回首页</el-button>
       </div>
-    </div>
-    <header class="header">
-      <div class="title">NOI 算法可视化学习平台（MVP）</div>
       <div class="sub">当前：无向图 / BFS（起点固定为 0，邻居按 id 升序）</div>
       <div class="auth">
         <template v-if="auth.isAuthed">
           <span class="auth-user">{{ auth.user?.email }}</span>
-          <button class="auth-btn" @click="onLogout">退出</button>
+          <el-button size="small" type="primary" @click="onLogout">退出</el-button>
         </template>
         <template v-else>
-          <button class="auth-btn" @click="authPanelOpen = !authPanelOpen">登录/注册</button>
+          <el-button size="small" type="primary" @click="authDialogOpen = true">登录/注册</el-button>
         </template>
       </div>
-      <div v-if="!auth.isAuthed && authPanelOpen" class="auth-panel">
-        <input v-model="authEmail" class="auth-input" placeholder="邮箱" />
-        <input v-model="authPassword" class="auth-input" placeholder="密码（至少8位）" type="password" />
-        <div class="auth-actions">
-          <button class="auth-btn" @click="onRegister">注册</button>
-          <button class="auth-btn" @click="onLogin">登录</button>
-        </div>
-        <div v-if="authError" class="auth-error">{{ authError }}</div>
-      </div>
-    </header>
+    </el-header>
 
-    <main class="main">
-      <section class="left">
+    <el-container class="main">
+      <el-aside class="side-menu" :width="sideCollapsed ? '72px' : '240px'">
+        <div class="side-title">
+          <span v-if="!sideCollapsed">算法目录</span>
+          <el-button
+            class="collapse-btn"
+            text
+            circle
+            :icon="sideCollapsed ? Expand : Fold"
+            :aria-label="sideCollapsed ? '展开' : '收起'"
+            @click="sideCollapsed = !sideCollapsed"
+          />
+        </div>
+        <el-menu
+          :default-active="selectedAlgo"
+          :collapse="sideCollapsed"
+          :collapse-transition="false"
+          :unique-opened="false"
+          :default-openeds="defaultOpeneds"
+          @select="onMenuSelect"
+        >
+          <el-sub-menu v-for="section in menuSections" :key="section.id" :index="section.id">
+            <template #title>
+              <span>{{ section.title }}</span>
+            </template>
+            <el-menu-item
+              v-for="item in section.items"
+              :key="item.id"
+              :index="item.algoKey || item.id"
+              :disabled="item.disabled"
+            >
+              {{ item.label }}
+            </el-menu-item>
+          </el-sub-menu>
+        </el-menu>
+      </el-aside>
+
+      <el-main class="center">
         <GraphCanvas
           :graph="graph"
           :node-states="vizState.nodeStates"
@@ -40,7 +65,6 @@
           @note="setNote"
           @disabled-action="onDisabledGraphAction"
         />
-        <!-- 悬浮状态面板 -->
         <div class="floating-panel">
           <StatePanel
             :note="vizState.note"
@@ -49,19 +73,19 @@
             :node-states="vizState.nodeStates"
           />
         </div>
-      </section>
+      </el-main>
 
-      <aside class="right">
+      <el-aside class="right" width="360px">
         <CodeViewer
           :code="currentAlgoCode"
           :title="currentAlgoTitle"
           language="JavaScript"
           :highlight-lines="vizState.highlightLines"
         />
-      </aside>
-    </main>
+      </el-aside>
+    </el-container>
 
-    <footer class="footer">
+    <el-footer class="footer">
       <PlayerControls
         :status="playerStatus"
         :current-step="currentStep"
@@ -76,28 +100,45 @@
         @reset-graph="resetGraphToDefault"
         @go-to-step="goToStep"
       />
-    </footer>
+    </el-footer>
 
-    <div v-if="loginModalOpen" class="modal-mask" @click.self="loginModalOpen = false">
-      <div class="modal">
-        <div class="modal-title">需要登录</div>
-        <div class="modal-body">登录后才能修改图（新增节点/连边/删除/拖拽）。</div>
-        <div class="modal-actions">
-          <button class="auth-btn" @click="goLogin">去登录</button>
-          <button class="auth-btn" @click="loginModalOpen = false">关闭</button>
-        </div>
-      </div>
-    </div>
-  </div>
+    <el-dialog v-model="authDialogOpen" title="登录 / 注册" width="360px">
+      <el-form label-position="top" class="auth-form">
+        <el-form-item label="邮箱">
+          <el-input v-model="authEmail" placeholder="请输入邮箱" />
+        </el-form-item>
+        <el-form-item label="密码">
+          <el-input v-model="authPassword" placeholder="至少 8 位" show-password type="password" />
+        </el-form-item>
+      </el-form>
+      <el-alert v-if="authError" class="auth-error" type="error" :closable="false" :title="authError" />
+      <template #footer>
+        <el-button @click="onRegister">注册</el-button>
+        <el-button type="primary" @click="onLogin">登录</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="loginModalOpen" title="需要登录" width="360px" :show-close="false">
+      <div class="modal-body">登录后才能修改图（新增节点/连边/删除/拖拽）。</div>
+      <template #footer>
+        <el-button @click="loginModalOpen = false">关闭</el-button>
+        <el-button type="primary" @click="goLogin">去登录</el-button>
+      </template>
+    </el-dialog>
+  </el-container>
 </template>
 
 <script setup lang="ts">
 import { reactive, ref, watch, computed, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import { Fold, Expand } from '@element-plus/icons-vue';
 import { storeToRefs } from 'pinia';
 import GraphCanvas from '../components/GraphCanvas.vue';
 import PlayerControls from '../components/PlayerControls.vue';
 import StatePanel from '../components/StatePanel.vue';
 import CodeViewer from '../components/CodeViewer.vue';
+import { sideMenuSections } from '../config/sideMenu';
 
 // 导入 core 模块
 import type { Graph } from '../core/graph/types';
@@ -121,22 +162,22 @@ const graphStore = useGraphStore();
 const { graph } = storeToRefs(graphStore);
 
 const auth = useAuthStore();
-const authPanelOpen = ref<boolean>(false);
+const router = useRouter();
+const authDialogOpen = ref<boolean>(false);
 const loginModalOpen = ref<boolean>(false);
 const authEmail = ref<string>('');
 const authPassword = ref<string>('');
 const authError = ref<string>('');
 
 type ToastKind = 'success' | 'error' | 'info';
-type Toast = { id: string; kind: ToastKind; text: string };
-const toasts = ref<Toast[]>([]);
 
 function pushToast(kind: ToastKind, text: string) {
-  const id = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
-  toasts.value = [...toasts.value, { id, kind, text }];
-  window.setTimeout(() => {
-    toasts.value = toasts.value.filter((t) => t.id !== id);
-  }, 1500);
+  ElMessage({
+    type: kind,
+    message: text,
+    duration: 1500,
+    showClose: false,
+  });
 }
 
 function clearAuthForm() {
@@ -182,6 +223,10 @@ const playerStatus = ref<PlayerStatus>('idle');
 const currentStep = ref<number>(0);
 const totalSteps = ref<number>(0);
 const selectedAlgo = ref<string>('bfs');
+const sideCollapsed = ref<boolean>(false);
+const defaultOpeneds = ['graph'];
+
+const menuSections = ref(sideMenuSections);
 
 // ---------------------------
 // 算法代码展示
@@ -465,7 +510,7 @@ async function onRegister() {
     await auth.register(authEmail.value, authPassword.value);
     vizState.note = '注册成功，请点击“登录”后再编辑图。';
     pushToast('success', '注册成功');
-    authPanelOpen.value = false;
+    authDialogOpen.value = false;
     clearAuthForm();
   } catch (e: any) {
     authError.value = formatAuthError(e) || '注册失败';
@@ -477,11 +522,12 @@ async function onLogin() {
   authError.value = '';
   try {
     await auth.login(authEmail.value, authPassword.value);
-    authPanelOpen.value = false;
+    authDialogOpen.value = false;
     clearAuthForm();
     vizState.note = '登录成功。现在可以编辑图。';
     pushToast('success', '登录成功');
     await loadGraphFromServer();
+    await router.push('/');
   } catch (e: any) {
     authError.value = formatAuthError(e) || '登录失败';
     pushToast('error', authError.value || '登录失败');
@@ -496,11 +542,24 @@ function onLogout() {
 
 function goLogin() {
   loginModalOpen.value = false;
-  authPanelOpen.value = true;
+  authDialogOpen.value = true;
+}
+
+function goHome() {
+  void router.push('/');
+}
+
+function onMenuSelect(index: string) {
+  const algo = menuSections.value
+    .flatMap((section) => section.items)
+    .find((item) => (item.algoKey || item.id) === index)?.algoKey;
+  if (algo) {
+    selectedAlgo.value = algo;
+  }
 }
 
 watch(
-  () => authPanelOpen.value,
+  () => authDialogOpen.value,
   (open) => {
     if (!open) {
       clearAuthForm();
@@ -523,44 +582,11 @@ watch(
 </script>
 
 <style scoped>
-.toast-wrap {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 100;
-  pointer-events: none;
-}
-.toast {
-  min-width: 220px;
-  max-width: 360px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  box-shadow: 0 10px 30px rgba(6, 78, 59, 0.18);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  background: rgba(236, 253, 245, 0.96);
-  color: #064e3b;
-}
-.toast.success {
-  border-color: rgba(16, 185, 129, 0.35);
-}
-.toast.error {
-  border-color: rgba(239, 68, 68, 0.35);
-  background: rgba(254, 242, 242, 0.96);
-  color: #991b1b;
-}
-.toast.info {
-  border-color: rgba(34, 197, 94, 0.25);
-}
-
 .page {
   height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr auto;
+  overflow: hidden;
   background: radial-gradient(1200px 600px at 20% 0%, rgba(34, 197, 94, 0.14), transparent 60%),
     radial-gradient(900px 500px at 90% 20%, rgba(16, 185, 129, 0.14), transparent 55%),
     var(--app-bg);
@@ -568,11 +594,20 @@ watch(
 }
 .header {
   padding: 12px 16px;
+  padding-bottom: 70px;
   border-bottom: 1px solid var(--border);
   position: relative;
   background: var(--panel-bg);
   backdrop-filter: blur(10px);
   z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .title {
   font-size: 16px;
@@ -580,6 +615,7 @@ watch(
 }
 .sub {
   margin-top: 6px;
+  margin-bottom: 8px;
   font-size: 12px;
   color: var(--muted-2);
 }
@@ -595,95 +631,49 @@ watch(
   font-size: 12px;
   color: var(--muted-2);
 }
-.auth-btn {
-  background: var(--btn-bg);
-  color: var(--btn-text);
-  border: 1px solid var(--btn-border);
-  padding: 6px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 12px;
-  box-shadow: 0 6px 18px rgba(6, 78, 59, 0.08);
+.ghost-btn {
+  border: 1px solid var(--border);
+  background: transparent;
 }
-.auth-btn:hover {
+.ghost-btn:hover {
   border-color: var(--border-strong);
 }
-.auth-panel {
-  position: absolute;
-  top: 44px;
-  right: 16px;
-  width: 260px;
-  background: var(--panel-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px;
-  display: grid;
-  gap: 8px;
-  z-index: 200;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(10px);
-}
-.auth-input {
-  width: 100%;
-  background: var(--panel-solid);
-  color: var(--text);
-  border: 1px solid var(--border);
-  padding: 8px 10px;
-  border-radius: 8px;
-  font-size: 12px;
-}
-.auth-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
 .auth-error {
-  font-size: 12px;
-  color: #991b1b;
-}
-
-.modal-mask {
-  position: fixed;
-  inset: 0;
-  background: rgba(6, 78, 59, 0.18);
-  display: grid;
-  place-items: center;
-  z-index: 50;
-}
-.modal {
-  width: 340px;
-  background: var(--panel-solid);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px;
-  display: grid;
-  gap: 10px;
-  box-shadow: var(--shadow);
-}
-.modal-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
+  margin-top: 6px;
 }
 .modal-body {
   font-size: 12px;
   color: var(--muted);
   line-height: 1.5;
 }
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
 .main {
-  display: grid;
-  grid-template-columns: 1fr 360px;
   min-height: 0;
+  overflow: hidden;
 }
-.left {
+.side-menu {
+  border-right: 1px solid var(--border);
+  padding: 12px 10px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(10px);
+  overflow: auto;
+}
+.side-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+.collapse-btn {
+  font-size: 12px;
+}
+.center {
   position: relative;
   min-height: 0;
   padding: 12px;
+  overflow: hidden;
 }
 .floating-panel {
   position: absolute;
@@ -708,8 +698,21 @@ watch(
 }
 .footer {
   border-top: 1px solid var(--border);
-  padding: 10px 12px;
+  padding: 6px 12px 16px;
+  height: auto;
+  min-height: 76px;
+  overflow: visible;
   background: var(--panel-bg);
   backdrop-filter: blur(10px);
+}
+:deep(.el-menu) {
+  border-right: none;
+  background: transparent;
+}
+:deep(.el-menu-item.is-active) {
+  background: rgba(16, 185, 129, 0.12);
+}
+:deep(.el-sub-menu__title) {
+  font-weight: 600;
 }
 </style>

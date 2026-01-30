@@ -1,0 +1,35 @@
+---
+name: record
+description: This is a new rule
+---
+
+# Overview
+
+每次修改代码都记录修改与功能一步一步完善的过程方便我后端答辩有记录，记录在/Users/Zhuanz/Documents/front/workspace-front/noi-algo-viz/record文件夹下面。
+
+## 记录规范
+
+- 仅当实际修改了代码时才记录（含新增文件、编辑文件、删除文件）
+- 仅修改项目规则或配置说明的情况无需记录
+- 记录文件放在 `/Users/Zhuanz/Documents/front/workspace-front/noi-algo-viz/record/`
+- 以日期为文件名：`YYYY-MM-DD.md`，同一天多次修改就追加内容
+- 记录内容尽量简洁但可复盘，包含以下字段：
+  - 时间（HH:mm）
+  - 目标/需求
+  - 变更摘要
+  - 影响文件
+  - 关键实现点
+  - 测试/验证
+  - 风险/待办（如有）
+
+## 记录模板
+
+```
+## HH:mm
+目标/需求：
+变更摘要：
+影响文件：
+关键实现点：
+测试/验证：
+风险/待办：
+```

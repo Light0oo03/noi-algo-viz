@@ -44,6 +44,11 @@
     </header>
 
     <main class="hero">
+      <div class="scroll-decor" aria-hidden="true">
+        <span class="glow glow-1" />
+        <span class="glow glow-2" />
+        <span class="glow glow-3" />
+      </div>
       <section class="hero-layout">
         <div class="hero-content">
           <div class="hero-badge">{{ t.hero.badge }}</div>
@@ -57,8 +62,17 @@
             <el-button class="primary-btn" type="primary" @click="goPlayground">
               {{ t.actions.primary }}
             </el-button>
-            <el-button class="secondary-btn" type="info" plain @click="authDialogOpen = true">
+            <el-button
+              v-if="!auth.isAuthed"
+              class="secondary-btn"
+              type="info"
+              plain
+              @click="authDialogOpen = true"
+            >
               {{ t.actions.secondary }}
+            </el-button>
+            <el-button v-else class="secondary-btn" type="info" plain @click="goPlayground">
+              {{ t.actions.secondaryAuthed }}
             </el-button>
           </div>
           <div class="hero-metrics">
@@ -118,7 +132,7 @@
         </div>
       </section>
 
-      <section class="preview">
+      <section class="preview scroll-reveal">
         <el-card class="preview-card">
           <div class="preview-title">{{ previewCards[0]?.title }}</div>
           <div class="preview-sub">{{ previewCards[0]?.desc }}</div>
@@ -135,6 +149,81 @@
           <div class="image-caption">{{ previewCards[1]?.title }}</div>
           <div class="image-sub">{{ previewCards[1]?.desc }}</div>
         </el-card>
+      </section>
+
+      <section class="feature-section scroll-reveal">
+        <div class="section-head">
+          <div class="section-title">{{ t.sections.features.title }}</div>
+          <div class="section-sub">{{ t.sections.features.subtitle }}</div>
+        </div>
+        <div class="feature-grid">
+          <div v-for="item in t.sections.features.items" :key="item.title" class="feature-card">
+            <div class="feature-title">{{ item.title }}</div>
+            <div class="feature-desc">{{ item.desc }}</div>
+            <div class="feature-tags">
+              <span v-for="tag in item.tags" :key="tag">{{ tag }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="learning-path scroll-reveal">
+        <div class="section-head">
+          <div class="section-title">{{ t.sections.path.title }}</div>
+          <div class="section-sub">{{ t.sections.path.subtitle }}</div>
+        </div>
+        <div class="path-track">
+          <div v-for="step in t.sections.path.steps" :key="step.title" class="path-step">
+            <div class="path-index">{{ step.index }}</div>
+            <div class="path-title">{{ step.title }}</div>
+            <div class="path-desc">{{ step.desc }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="method-section scroll-reveal">
+        <div class="section-head">
+          <div class="section-title">{{ t.sections.methods.title }}</div>
+          <div class="section-sub">{{ t.sections.methods.subtitle }}</div>
+        </div>
+        <div class="method-grid">
+          <div v-for="item in t.sections.methods.items" :key="item.title" class="method-card">
+            <div class="method-title">{{ item.title }}</div>
+            <div class="method-desc">{{ item.desc }}</div>
+            <div class="method-points">
+              <span v-for="point in item.points" :key="point">{{ point }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="outcome-section scroll-reveal">
+        <div class="section-head">
+          <div class="section-title">{{ t.sections.outcomes.title }}</div>
+          <div class="section-sub">{{ t.sections.outcomes.subtitle }}</div>
+        </div>
+        <div class="outcome-grid">
+          <div v-for="item in t.sections.outcomes.items" :key="item.title" class="outcome-card">
+            <div class="outcome-value">{{ item.value }}</div>
+            <div class="outcome-title">{{ item.title }}</div>
+            <div class="outcome-desc">{{ item.desc }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-section scroll-reveal">
+        <div class="cta-card">
+          <div class="cta-title">{{ t.sections.cta.title }}</div>
+          <div class="cta-desc">{{ t.sections.cta.desc }}</div>
+          <div class="cta-actions">
+            <el-button class="primary-btn" type="primary" @click="goPlayground">
+              {{ t.actions.primary }}
+            </el-button>
+            <el-button class="secondary-btn" type="info" plain @click="authDialogOpen = true">
+              {{ t.sections.cta.secondary }}
+            </el-button>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -161,6 +250,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useAuthStore } from '../stores/authStore';
 import logo from '../assets/light03-logo.svg';
 
@@ -191,6 +281,7 @@ const copy = {
       enter: '进入可视化',
       primary: '立即体验可视化',
       secondary: '登录以保存进度',
+      secondaryAuthed: '继续学习',
     },
     hero: {
       badge: '教育平台 · 算法可视化',
@@ -268,6 +359,75 @@ const copy = {
         },
       ],
     },
+    sections: {
+      features: {
+        title: '教学能力组件',
+        subtitle: '用可视化把抽象算法拆成可讲、可练、可追踪的学习过程。',
+        items: [
+          {
+            title: '讲解脚本',
+            desc: '通过剧情化步骤分解每一行代码执行结果，便于课堂逐步讲解。',
+            tags: ['逐步高亮', '状态面板', '变量跟踪'],
+          },
+          {
+            title: '课堂演示',
+            desc: '支持暂停、回放与多速率播放，让学生跟上老师的演示节奏。',
+            tags: ['播放控制', '时间轴', '标注提示'],
+          },
+          {
+            title: '自主练习',
+            desc: '提供标准模板与自定义输入，鼓励学生反复验证算法理解。',
+            tags: ['题目模板', '自定义输入', '结果对比'],
+          },
+        ],
+      },
+      path: {
+        title: '学习路径',
+        subtitle: '从基础结构到高级算法，层层递进形成系统化能力。',
+        steps: [
+          { index: '01', title: '基础结构', desc: '链表、栈、队列的行为可视化。' },
+          { index: '02', title: '树与递归', desc: '遍历、构建、递归状态理解。' },
+          { index: '03', title: '图与搜索', desc: 'BFS/DFS/最短路结构化掌握。' },
+          { index: '04', title: '动态规划', desc: '状态转移图与表格同步演示。' },
+          { index: '05', title: '综合实战', desc: '题型拆解、复杂场景建模。' },
+        ],
+      },
+      methods: {
+        title: '课堂方法论',
+        subtitle: '围绕“看得见的思维过程”设计教学流程。',
+        items: [
+          {
+            title: '讲解 + 演示',
+            desc: '理论知识配合实时动画，帮助学生建立图像化记忆。',
+            points: ['思路拆解', '代码同步', '关键节点标注'],
+          },
+          {
+            title: '练习 + 反馈',
+            desc: '学生即时看到算法结果，形成闭环纠错机制。',
+            points: ['自测题库', '结果对比', '错误定位'],
+          },
+          {
+            title: '复盘 + 迁移',
+            desc: '复盘算法步骤并迁移到相似题型。',
+            points: ['步骤回放', '思维导图', '迁移训练'],
+          },
+        ],
+      },
+      outcomes: {
+        title: '学习成效',
+        subtitle: '从“理解算法”到“掌握算法”的可衡量成长。',
+        items: [
+          { value: '4x', title: '理解速度', desc: '抽象概念转为动态图像降低理解门槛。' },
+          { value: '92%', title: '课堂互动率', desc: '可视化步骤让讨论更聚焦。' },
+          { value: '3x', title: '复盘效率', desc: '反复播放关键步骤并精准定位错误。' },
+        ],
+      },
+      cta: {
+        title: '开启你的算法可视化课堂',
+        desc: '用更直观的方式讲授算法，让学生真正看懂每一步。',
+        secondary: '申请课堂体验',
+      },
+    },
     auth: {
       title: '登录 / 注册',
       emailLabel: '邮箱',
@@ -301,6 +461,7 @@ const copy = {
       enter: 'Enter Playground',
       primary: 'Start Visualizing',
       secondary: 'Sign in to save progress',
+      secondaryAuthed: 'Continue learning',
     },
     hero: {
       badge: 'Education Platform · Algorithm Visualization',
@@ -377,6 +538,75 @@ const copy = {
           desc: 'Nodes, edges, pointers, and more components are ready for learning scenes.',
         },
       ],
+    },
+    sections: {
+      features: {
+        title: 'Teaching-ready features',
+        subtitle: 'Turn abstract algorithms into teachable, trackable learning journeys.',
+        items: [
+          {
+            title: 'Guided scripting',
+            desc: 'Break down every line with step-by-step narration for classrooms.',
+            tags: ['Step highlight', 'State panel', 'Variable tracking'],
+          },
+          {
+            title: 'Classroom demo',
+            desc: 'Pause, replay, and speed control keep students in sync with teaching.',
+            tags: ['Playback', 'Timeline', 'Annotations'],
+          },
+          {
+            title: 'Self practice',
+            desc: 'Templates and custom input help students verify their understanding.',
+            tags: ['Templates', 'Custom input', 'Result compare'],
+          },
+        ],
+      },
+      path: {
+        title: 'Learning path',
+        subtitle: 'Progress from fundamentals to advanced algorithms step by step.',
+        steps: [
+          { index: '01', title: 'Foundations', desc: 'Visualize lists, stacks, and queues.' },
+          { index: '02', title: 'Trees & recursion', desc: 'Traverse and reason about recursion states.' },
+          { index: '03', title: 'Graphs & search', desc: 'Master BFS/DFS and shortest paths.' },
+          { index: '04', title: 'Dynamic programming', desc: 'See transitions in tables and graphs.' },
+          { index: '05', title: 'Capstone practice', desc: 'Apply patterns to complex scenarios.' },
+        ],
+      },
+      methods: {
+        title: 'Teaching methodology',
+        subtitle: 'Design the class flow around visible thinking.',
+        items: [
+          {
+            title: 'Explain + visualize',
+            desc: 'Synchronize concepts with animations to build mental models.',
+            points: ['Concept breakdown', 'Code sync', 'Key markers'],
+          },
+          {
+            title: 'Practice + feedback',
+            desc: 'Students validate results instantly and fix mistakes faster.',
+            points: ['Practice sets', 'Result compare', 'Error pinpoint'],
+          },
+          {
+            title: 'Review + transfer',
+            desc: 'Replay key steps and transfer patterns to new problems.',
+            points: ['Step replay', 'Mind map', 'Pattern transfer'],
+          },
+        ],
+      },
+      outcomes: {
+        title: 'Learning impact',
+        subtitle: 'Measure progress from understanding to mastery.',
+        items: [
+          { value: '4x', title: 'Faster comprehension', desc: 'Dynamic visuals reduce cognitive load.' },
+          { value: '92%', title: 'Class engagement', desc: 'Stepwise animation keeps discussion focused.' },
+          { value: '3x', title: 'Review efficiency', desc: 'Replay critical steps and locate mistakes.' },
+        ],
+      },
+      cta: {
+        title: 'Launch your visualization class',
+        desc: 'Teach algorithms with clarity so every step is visible.',
+        secondary: 'Request classroom access',
+      },
     },
     auth: {
       title: 'Sign in / Register',
@@ -545,6 +775,7 @@ function setLocale(next: Locale) {
 onMounted(() => {
   if (!homeRef.value) return;
   if (!shouldReduceMotion()) {
+    gsap.registerPlugin(ScrollTrigger);
     gsapCtx = gsap.context((self) => {
       const tl = gsap.timeline({
         defaults: { ease: 'power2.out' },
@@ -607,6 +838,123 @@ onMounted(() => {
         repeat: -1,
         yoyo: true,
         ease: 'sine.inOut',
+      });
+
+      gsap.to('.hero-visual', {
+        y: 80,
+        scrollTrigger: {
+          trigger: '.hero-layout',
+          start: 'top top',
+          end: 'bottom top',
+          scrub: true,
+        },
+      });
+
+      gsap.to('.glow-1', {
+        y: 180,
+        x: -40,
+        scrollTrigger: {
+          trigger: '.hero',
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: true,
+        },
+      });
+      gsap.to('.glow-2', {
+        y: -140,
+        x: 60,
+        scrollTrigger: {
+          trigger: '.method-section',
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: true,
+        },
+      });
+      gsap.to('.glow-3', {
+        y: 220,
+        x: 80,
+        scrollTrigger: {
+          trigger: '.outcome-section',
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: true,
+        },
+      });
+
+      gsap.from('.feature-card', {
+        y: 30,
+        opacity: 0,
+        duration: 0.8,
+        stagger: 0.12,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: '.feature-section',
+          start: 'top 75%',
+        },
+      });
+
+      gsap.from('.path-step', {
+        y: 26,
+        opacity: 0,
+        duration: 0.7,
+        stagger: 0.1,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: '.learning-path',
+          start: 'top 75%',
+        },
+      });
+
+      const pathTracks = self.selector?.('.path-track') ?? [];
+      if (pathTracks.length) {
+        gsap.to(pathTracks, {
+          xPercent: -18,
+          scrollTrigger: {
+            trigger: '.learning-path',
+            start: 'top 70%',
+            end: 'bottom top',
+            scrub: true,
+          },
+        });
+      }
+
+      gsap.from('.method-card', {
+        y: 32,
+        opacity: 0,
+        duration: 0.8,
+        stagger: 0.15,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: '.method-section',
+          start: 'top 75%',
+        },
+      });
+
+      gsap.from('.outcome-card', {
+        y: 30,
+        opacity: 0,
+        duration: 0.8,
+        stagger: 0.12,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: '.outcome-section',
+          start: 'top 75%',
+        },
+      });
+
+      const revealItems = self.selector?.('.scroll-reveal') ?? [];
+      revealItems.forEach((element: Element, index: number) => {
+        gsap.from(element, {
+          y: 24,
+          opacity: 0,
+          duration: 0.7,
+          delay: index * 0.02,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: element,
+            start: 'top 82%',
+          },
+        });
       });
     }, homeRef.value);
   }
@@ -750,12 +1098,49 @@ onBeforeUnmount(() => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 70px 24px 90px;
+  position: relative;
+  overflow: hidden;
+}
+.scroll-decor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+.glow {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  filter: blur(0);
+  opacity: 0.45;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.28), transparent 70%);
+}
+.glow-1 {
+  top: -40px;
+  left: -30px;
+}
+.glow-2 {
+  top: 240px;
+  right: 60px;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.25), transparent 72%);
+}
+.glow-3 {
+  bottom: 80px;
+  left: 40%;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.22), transparent 75%);
 }
 .hero-layout {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
   gap: 40px;
   align-items: center;
+  position: relative;
+  z-index: 1;
 }
 .hero-content {
   display: flex;
@@ -1078,6 +1463,180 @@ onBeforeUnmount(() => {
   color: var(--muted);
 }
 
+.feature-section,
+.learning-path,
+.method-section,
+.outcome-section,
+.cta-section {
+  margin-top: 48px;
+}
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.feature-card {
+  padding: 18px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 16px 30px rgba(15, 118, 110, 0.08);
+}
+.feature-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f766e;
+}
+.feature-desc {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.feature-tags {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #2563eb;
+}
+.feature-tags span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  background: rgba(59, 130, 246, 0.08);
+}
+.learning-path {
+  position: relative;
+  overflow: hidden;
+}
+.path-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 1fr);
+  gap: 16px;
+  padding-bottom: 10px;
+}
+.path-step {
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 118, 110, 0.18);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(255, 255, 255, 0.9));
+  box-shadow: 0 12px 26px rgba(15, 118, 110, 0.1);
+}
+.path-index {
+  font-size: 12px;
+  color: rgba(15, 118, 110, 0.7);
+  font-weight: 600;
+}
+.path-title {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f766e;
+}
+.path-desc {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.method-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.method-card {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 30px rgba(59, 130, 246, 0.08);
+}
+.method-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f766e;
+}
+.method-desc {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.method-points {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #10b981;
+}
+.method-points span {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.08);
+}
+.outcome-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.outcome-card {
+  padding: 20px;
+  border-radius: 20px;
+  background: #0f172a;
+  color: #f8fafc;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.25);
+}
+.outcome-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #22d3ee;
+}
+.outcome-title {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.outcome-desc {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(248, 250, 252, 0.7);
+  line-height: 1.6;
+}
+.cta-section {
+  margin: 60px 0 20px;
+}
+.cta-card {
+  padding: 32px;
+  border-radius: 26px;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.18), rgba(59, 130, 246, 0.2));
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 0 20px 50px rgba(15, 118, 110, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+}
+.cta-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f766e;
+}
+.cta-desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.cta-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 960px) {
   .home-header {
     flex-direction: column;
@@ -1114,6 +1673,21 @@ onBeforeUnmount(() => {
   }
   .tab-panel {
     margin: 0 auto 30px;
+  }
+  .feature-grid,
+  .method-grid,
+  .outcome-grid {
+    grid-template-columns: 1fr;
+  }
+  .path-track {
+    grid-auto-columns: minmax(200px, 1fr);
+  }
+  .cta-card {
+    align-items: center;
+    text-align: center;
+  }
+  .cta-actions {
+    justify-content: center;
   }
   .preview {
     grid-template-columns: 1fr;

@@ -5,8 +5,8 @@
   "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/main.js",
+    "build": "node scripts/adjust-schema.js && prisma generate && tsc -p tsconfig.json",
+    "start": "echo 'Running DB Push...' && prisma db push --accept-data-loss && echo 'Starting App...' && node dist/main.js",
     "prisma": "prisma",
     "db:push": "prisma db push",
     "generate": "prisma generate",
@@ -23,13 +23,13 @@
     "dotenv": "^17.2.1",
     "jsonwebtoken": "^9.0.2",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
-  },
-  "devDependencies": {
+    "rxjs": "^7.8.2",
     "@types/node": "^24.10.1",
     "@types/jsonwebtoken": "^9.0.10",
     "tsx": "^4.20.2",
     "prisma": "^6.13.0",
     "typescript": "~5.9.3"
-  }
+  },
+  "devDependencies": {},
+  "packageManager": "pnpm@7.33.5+sha512.4e499f22fffe5845aa8f9463e1386b2d72c3134e0ebef9409360ad844fef0290e82b479b32eb2ec0f30e56607e1820c22167829fd62656d41a8fd0cc4a0f4267"
 }

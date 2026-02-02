@@ -48,6 +48,9 @@
         <span class="glow glow-1" />
         <span class="glow glow-2" />
         <span class="glow glow-3" />
+        <span class="parallax-shard shard-1" />
+        <span class="parallax-shard shard-2" />
+        <span class="parallax-shard shard-3" />
       </div>
       <section class="hero-layout">
         <div class="hero-content">
@@ -251,8 +254,10 @@ import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
 import { useAuthStore } from '../stores/authStore';
 import logo from '../assets/light03-logo.svg';
+import { homeCopy, type HomeLocale } from '../i18n/home';
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -266,372 +271,8 @@ let gsapCtx: gsap.Context | null = null;
 let autoRotateTimer: number | null = null;
 let handleKeydown: ((event: KeyboardEvent) => void) | null = null;
 
-type Locale = 'zh' | 'en';
-
-const locale = ref<Locale>('zh');
-const copy = {
-  zh: {
-    nav: {
-      visual: '算法可视化',
-      editor: '算法编辑器',
-    },
-    actions: {
-      login: '登录/注册',
-      logout: '退出',
-      enter: '进入可视化',
-      primary: '立即体验可视化',
-      secondary: '登录以保存进度',
-      secondaryAuthed: '继续学习',
-    },
-    hero: {
-      badge: '教育平台 · 算法可视化',
-      titlePrefix: '让算法学习更',
-      titleHighlight: '直观',
-      titleSuffix: '与系统',
-      sub: '将代码执行过程与数据结构变化实时映射为动画，帮助学生理解指针、递归与复杂状态转移。',
-    },
-    metrics: [
-      { value: '60+', label: '算法动画' },
-      { value: '8+', label: '数据结构' },
-      { value: '100+', label: '可视步骤' },
-    ],
-    visual: {
-      chips: ['BFS', 'DFS', 'Dijkstra', 'DP', 'Sort', 'Trie'],
-    },
-    modules: {
-      title: '算法模块速览',
-      subtitle: '点击模块查看核心概念与学习重点，课程内容可持续扩展。',
-      tabs: [
-        {
-          key: 'linked-list',
-          title: '链表',
-          desc: '链表通过节点与指针连接数据，支持高效的插入与删除；理解头尾指针与遍历方式是关键。',
-          tags: ['头插法', '尾插法', '双向链表', '快慢指针'],
-        },
-        {
-          key: 'stack',
-          title: '栈',
-          desc: '栈遵循后进先出（LIFO），常用于函数调用、括号匹配与路径回溯等场景。',
-          tags: ['入栈/出栈', '括号匹配', '表达式求值', '单调栈'],
-        },
-        {
-          key: 'queue',
-          title: '队列',
-          desc: '队列遵循先进先出（FIFO），适合层序遍历、任务调度与异步队列的建模。',
-          tags: ['循环队列', '双端队列', '层序遍历', 'BFS'],
-        },
-        {
-          key: 'tree',
-          title: '树',
-          desc: '树结构描述层级关系，掌握遍历方式与节点关系是理解二叉树与搜索树的核心。',
-          tags: ['前中后序', '二叉搜索树', '堆', '线段树'],
-        },
-        {
-          key: 'graph',
-          title: '图',
-          desc: '图表示复杂关系网络，掌握 DFS/BFS、最短路与最小生成树是基础能力。',
-          tags: ['DFS/BFS', '最短路', '最小生成树', '拓扑排序'],
-        },
-        {
-          key: 'search',
-          title: '查找',
-          desc: '查找关注如何快速定位目标元素，理解有序数据结构与哈希映射的特性。',
-          tags: ['二分查找', '哈希表', '字符串匹配', '查找优化'],
-        },
-        {
-          key: 'sort',
-          title: '排序',
-          desc: '排序是算法核心模块，比较型与非比较型算法在稳定性与复杂度上各有侧重。',
-          tags: ['快速排序', '归并排序', '计数排序', '稳定性'],
-        },
-      ],
-    },
-    preview: {
-      cards: [
-        {
-          title: '课堂可视化一体化',
-          desc: '从概念讲解到动画演示与代码复现，形成完整的算法学习闭环。',
-          points: ['课堂演示', '分步播放', '代码同步'],
-        },
-        {
-          title: '算法画布预览',
-          desc: '支持节点、边、指针等多种可视化组件，满足教学场景。',
-        },
-      ],
-    },
-    sections: {
-      features: {
-        title: '教学能力组件',
-        subtitle: '用可视化把抽象算法拆成可讲、可练、可追踪的学习过程。',
-        items: [
-          {
-            title: '讲解脚本',
-            desc: '通过剧情化步骤分解每一行代码执行结果，便于课堂逐步讲解。',
-            tags: ['逐步高亮', '状态面板', '变量跟踪'],
-          },
-          {
-            title: '课堂演示',
-            desc: '支持暂停、回放与多速率播放，让学生跟上老师的演示节奏。',
-            tags: ['播放控制', '时间轴', '标注提示'],
-          },
-          {
-            title: '自主练习',
-            desc: '提供标准模板与自定义输入，鼓励学生反复验证算法理解。',
-            tags: ['题目模板', '自定义输入', '结果对比'],
-          },
-        ],
-      },
-      path: {
-        title: '学习路径',
-        subtitle: '从基础结构到高级算法，层层递进形成系统化能力。',
-        steps: [
-          { index: '01', title: '基础结构', desc: '链表、栈、队列的行为可视化。' },
-          { index: '02', title: '树与递归', desc: '遍历、构建、递归状态理解。' },
-          { index: '03', title: '图与搜索', desc: 'BFS/DFS/最短路结构化掌握。' },
-          { index: '04', title: '动态规划', desc: '状态转移图与表格同步演示。' },
-          { index: '05', title: '综合实战', desc: '题型拆解、复杂场景建模。' },
-        ],
-      },
-      methods: {
-        title: '课堂方法论',
-        subtitle: '围绕“看得见的思维过程”设计教学流程。',
-        items: [
-          {
-            title: '讲解 + 演示',
-            desc: '理论知识配合实时动画，帮助学生建立图像化记忆。',
-            points: ['思路拆解', '代码同步', '关键节点标注'],
-          },
-          {
-            title: '练习 + 反馈',
-            desc: '学生即时看到算法结果，形成闭环纠错机制。',
-            points: ['自测题库', '结果对比', '错误定位'],
-          },
-          {
-            title: '复盘 + 迁移',
-            desc: '复盘算法步骤并迁移到相似题型。',
-            points: ['步骤回放', '思维导图', '迁移训练'],
-          },
-        ],
-      },
-      outcomes: {
-        title: '学习成效',
-        subtitle: '从“理解算法”到“掌握算法”的可衡量成长。',
-        items: [
-          { value: '4x', title: '理解速度', desc: '抽象概念转为动态图像降低理解门槛。' },
-          { value: '92%', title: '课堂互动率', desc: '可视化步骤让讨论更聚焦。' },
-          { value: '3x', title: '复盘效率', desc: '反复播放关键步骤并精准定位错误。' },
-        ],
-      },
-      cta: {
-        title: '开启你的算法可视化课堂',
-        desc: '用更直观的方式讲授算法，让学生真正看懂每一步。',
-        secondary: '申请课堂体验',
-      },
-    },
-    auth: {
-      title: '登录 / 注册',
-      emailLabel: '邮箱',
-      emailPlaceholder: '请输入邮箱',
-      passwordLabel: '密码',
-      passwordPlaceholder: '至少 8 位',
-      register: '注册',
-      login: '登录',
-    },
-    toast: {
-      registerSuccess: '注册成功',
-      loginSuccess: '登录成功',
-      logout: '已退出登录',
-      registerFailed: '注册失败',
-      loginFailed: '登录失败',
-    },
-    errors: {
-      unknown: '未知错误',
-      server: '服务器开小差了，请稍后再试',
-      failed: '操作失败',
-    },
-  },
-  en: {
-    nav: {
-      visual: 'Visualization',
-      editor: 'Algorithm Editor',
-    },
-    actions: {
-      login: 'Sign in / Register',
-      logout: 'Sign out',
-      enter: 'Enter Playground',
-      primary: 'Start Visualizing',
-      secondary: 'Sign in to save progress',
-      secondaryAuthed: 'Continue learning',
-    },
-    hero: {
-      badge: 'Education Platform · Algorithm Visualization',
-      titlePrefix: 'Make algorithm learning ',
-      titleHighlight: 'visual',
-      titleSuffix: ' and structured',
-      sub: 'Turn every code step into intuitive animations so students can see pointers, recursion, and state transitions.',
-    },
-    metrics: [
-      { value: '60+', label: 'Algorithm demos' },
-      { value: '8+', label: 'Data structures' },
-      { value: '100+', label: 'Visual steps' },
-    ],
-    visual: {
-      chips: ['BFS', 'DFS', 'Dijkstra', 'DP', 'Sort', 'Trie'],
-    },
-    modules: {
-      title: 'Module highlights',
-      subtitle: 'Click a module to preview core concepts and learning focus.',
-      tabs: [
-        {
-          key: 'linked-list',
-          title: 'Linked List',
-          desc: 'Linked lists connect nodes with pointers and support efficient insertions and deletions.',
-          tags: ['Head insert', 'Tail insert', 'Doubly linked', 'Fast & slow'],
-        },
-        {
-          key: 'stack',
-          title: 'Stack',
-          desc: 'Stacks follow LIFO and are great for call stacks, bracket matching, and backtracking.',
-          tags: ['Push/Pop', 'Bracket match', 'Expression eval', 'Monotonic'],
-        },
-        {
-          key: 'queue',
-          title: 'Queue',
-          desc: 'Queues follow FIFO and are ideal for level-order traversal and task scheduling.',
-          tags: ['Circular queue', 'Deque', 'Level order', 'BFS'],
-        },
-        {
-          key: 'tree',
-          title: 'Tree',
-          desc: 'Trees model hierarchical relations; traversals are key to understanding search trees.',
-          tags: ['Traversals', 'BST', 'Heap', 'Segment tree'],
-        },
-        {
-          key: 'graph',
-          title: 'Graph',
-          desc: 'Graphs model networks; learn DFS/BFS, shortest paths, and spanning trees.',
-          tags: ['DFS/BFS', 'Shortest path', 'MST', 'Topological sort'],
-        },
-        {
-          key: 'search',
-          title: 'Search',
-          desc: 'Search focuses on locating targets efficiently using order and hashing.',
-          tags: ['Binary search', 'Hashing', 'String match', 'Optimization'],
-        },
-        {
-          key: 'sort',
-          title: 'Sorting',
-          desc: 'Sorting balances stability and complexity across comparison and non-comparison methods.',
-          tags: ['Quick sort', 'Merge sort', 'Counting sort', 'Stability'],
-        },
-      ],
-    },
-    preview: {
-      cards: [
-        {
-          title: 'Teaching-ready visualization',
-          desc: 'From explanation to animation and code, deliver a complete learning loop.',
-          points: ['Classroom demos', 'Step playback', 'Code sync'],
-        },
-        {
-          title: 'Visualization canvas',
-          desc: 'Nodes, edges, pointers, and more components are ready for learning scenes.',
-        },
-      ],
-    },
-    sections: {
-      features: {
-        title: 'Teaching-ready features',
-        subtitle: 'Turn abstract algorithms into teachable, trackable learning journeys.',
-        items: [
-          {
-            title: 'Guided scripting',
-            desc: 'Break down every line with step-by-step narration for classrooms.',
-            tags: ['Step highlight', 'State panel', 'Variable tracking'],
-          },
-          {
-            title: 'Classroom demo',
-            desc: 'Pause, replay, and speed control keep students in sync with teaching.',
-            tags: ['Playback', 'Timeline', 'Annotations'],
-          },
-          {
-            title: 'Self practice',
-            desc: 'Templates and custom input help students verify their understanding.',
-            tags: ['Templates', 'Custom input', 'Result compare'],
-          },
-        ],
-      },
-      path: {
-        title: 'Learning path',
-        subtitle: 'Progress from fundamentals to advanced algorithms step by step.',
-        steps: [
-          { index: '01', title: 'Foundations', desc: 'Visualize lists, stacks, and queues.' },
-          { index: '02', title: 'Trees & recursion', desc: 'Traverse and reason about recursion states.' },
-          { index: '03', title: 'Graphs & search', desc: 'Master BFS/DFS and shortest paths.' },
-          { index: '04', title: 'Dynamic programming', desc: 'See transitions in tables and graphs.' },
-          { index: '05', title: 'Capstone practice', desc: 'Apply patterns to complex scenarios.' },
-        ],
-      },
-      methods: {
-        title: 'Teaching methodology',
-        subtitle: 'Design the class flow around visible thinking.',
-        items: [
-          {
-            title: 'Explain + visualize',
-            desc: 'Synchronize concepts with animations to build mental models.',
-            points: ['Concept breakdown', 'Code sync', 'Key markers'],
-          },
-          {
-            title: 'Practice + feedback',
-            desc: 'Students validate results instantly and fix mistakes faster.',
-            points: ['Practice sets', 'Result compare', 'Error pinpoint'],
-          },
-          {
-            title: 'Review + transfer',
-            desc: 'Replay key steps and transfer patterns to new problems.',
-            points: ['Step replay', 'Mind map', 'Pattern transfer'],
-          },
-        ],
-      },
-      outcomes: {
-        title: 'Learning impact',
-        subtitle: 'Measure progress from understanding to mastery.',
-        items: [
-          { value: '4x', title: 'Faster comprehension', desc: 'Dynamic visuals reduce cognitive load.' },
-          { value: '92%', title: 'Class engagement', desc: 'Stepwise animation keeps discussion focused.' },
-          { value: '3x', title: 'Review efficiency', desc: 'Replay critical steps and locate mistakes.' },
-        ],
-      },
-      cta: {
-        title: 'Launch your visualization class',
-        desc: 'Teach algorithms with clarity so every step is visible.',
-        secondary: 'Request classroom access',
-      },
-    },
-    auth: {
-      title: 'Sign in / Register',
-      emailLabel: 'Email',
-      emailPlaceholder: 'Enter your email',
-      passwordLabel: 'Password',
-      passwordPlaceholder: 'At least 8 characters',
-      register: 'Register',
-      login: 'Sign in',
-    },
-    toast: {
-      registerSuccess: 'Registration successful',
-      loginSuccess: 'Signed in',
-      logout: 'Signed out',
-      registerFailed: 'Registration failed',
-      loginFailed: 'Sign in failed',
-    },
-    errors: {
-      unknown: 'Unknown error',
-      server: 'Server is busy, please try again later',
-      failed: 'Operation failed',
-    },
-  },
-};
-const t = computed(() => copy[locale.value]);
+const locale = ref<HomeLocale>('zh');
+const t = computed(() => homeCopy[locale.value]);
 const algoTabs = computed(() => t.value.modules.tabs);
 const previewCards = computed(() => t.value.preview.cards);
 const activeTabKey = ref(algoTabs.value[0]?.key ?? 'linked-list');
@@ -768,14 +409,14 @@ function onTabClick(key: string) {
   });
 }
 
-function setLocale(next: Locale) {
+ function setLocale(next: HomeLocale) {
   locale.value = next;
 }
 
 onMounted(() => {
   if (!homeRef.value) return;
   if (!shouldReduceMotion()) {
-    gsap.registerPlugin(ScrollTrigger);
+    gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
     gsapCtx = gsap.context((self) => {
       const tl = gsap.timeline({
         defaults: { ease: 'power2.out' },
@@ -881,66 +522,161 @@ onMounted(() => {
         },
       });
 
-      gsap.from('.feature-card', {
-        y: 30,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.12,
-        ease: 'power2.out',
+      gsap.to('.shard-1', {
+        y: 260,
+        rotate: 18,
+        scrollTrigger: {
+          trigger: '.hero',
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: true,
+        },
+      });
+      gsap.to('.shard-2', {
+        y: -200,
+        rotate: -12,
         scrollTrigger: {
           trigger: '.feature-section',
-          start: 'top 75%',
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: true,
         },
       });
-
-      gsap.from('.path-step', {
-        y: 26,
-        opacity: 0,
-        duration: 0.7,
-        stagger: 0.1,
-        ease: 'power2.out',
+      gsap.to('.shard-3', {
+        y: 240,
+        rotate: 22,
         scrollTrigger: {
-          trigger: '.learning-path',
-          start: 'top 75%',
+          trigger: '.cta-section',
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: true,
         },
       });
 
-      const pathTracks = self.selector?.('.path-track') ?? [];
-      if (pathTracks.length) {
-        gsap.to(pathTracks, {
-          xPercent: -18,
+      gsap.fromTo(
+        '.feature-card',
+        { y: 40, opacity: 0, rotateX: 12, rotateY: -8, z: -60 },
+        {
+          y: 0,
+          opacity: 1,
+          rotateX: 0,
+          rotateY: 0,
+          z: 0,
+          duration: 1,
+          stagger: 0.15,
+          ease: 'power3.out',
           scrollTrigger: {
-            trigger: '.learning-path',
-            start: 'top 70%',
-            end: 'bottom top',
+            trigger: '.feature-section',
+            start: 'top 75%',
+            end: 'bottom 50%',
             scrub: true,
           },
+        }
+      );
+
+      const pathSteps = self.selector?.('.path-step') ?? [];
+      pathSteps.forEach((step: Element, index: number) => {
+        const direction = index % 2 === 0 ? -1 : 1;
+        gsap.from(step, {
+          x: 160 * direction,
+          y: 24,
+          rotate: 2 * direction,
+          opacity: 0,
+          duration: 0.85,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: step,
+            start: 'top 78%',
+          },
         });
-      }
-
-      gsap.from('.method-card', {
-        y: 32,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.15,
-        ease: 'power2.out',
-        scrollTrigger: {
-          trigger: '.method-section',
-          start: 'top 75%',
-        },
       });
 
-      gsap.from('.outcome-card', {
-        y: 30,
-        opacity: 0,
-        duration: 0.8,
-        stagger: 0.12,
-        ease: 'power2.out',
-        scrollTrigger: {
-          trigger: '.outcome-section',
-          start: 'top 75%',
-        },
-      });
+      gsap.fromTo(
+        '.method-card',
+        { y: 36, opacity: 0, rotateY: 12, z: -80 },
+        {
+          y: 0,
+          opacity: 1,
+          rotateY: 0,
+          z: 0,
+          duration: 1,
+          stagger: 0.16,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: '.method-section',
+            start: 'top 75%',
+            end: 'bottom 55%',
+            scrub: true,
+          },
+        }
+      );
+
+      gsap.fromTo(
+        '.outcome-card',
+        { y: 40, opacity: 0, rotateX: -10, z: -80 },
+        {
+          y: 0,
+          opacity: 1,
+          rotateX: 0,
+          z: 0,
+          duration: 1,
+          stagger: 0.14,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: '.outcome-section',
+            start: 'top 75%',
+            end: 'bottom 55%',
+            scrub: true,
+          },
+        }
+      );
+
+      gsap.fromTo(
+        '.cta-card',
+        { y: 40, opacity: 0, rotateX: 10, scale: 0.96 },
+        {
+          y: 0,
+          opacity: 1,
+          rotateX: 0,
+          scale: 1,
+          duration: 1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: '.cta-section',
+            start: 'top 80%',
+          },
+        }
+      );
+
+      gsap.fromTo(
+        '.preview-card',
+        { y: 30, opacity: 0, rotateY: -6 },
+        {
+          y: 0,
+          opacity: 1,
+          rotateY: 0,
+          duration: 0.9,
+          stagger: 0.12,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: '.preview',
+            start: 'top 75%',
+          },
+        }
+      );
+
+      gsap
+        .timeline({
+          scrollTrigger: {
+            trigger: '.modules',
+            start: 'top top',
+            end: '+=420',
+            scrub: true,
+            pin: true,
+          },
+        })
+        .fromTo('.tab-panel', { scale: 0.94, opacity: 0.6 }, { scale: 1, opacity: 1, duration: 1 })
+        .fromTo('.hero-tabs .tab', { y: 12, opacity: 0.6 }, { y: 0, opacity: 1, stagger: 0.06 }, 0);
 
       const revealItems = self.selector?.('.scroll-reveal') ?? [];
       revealItems.forEach((element: Element, index: number) => {
@@ -1133,6 +869,34 @@ onBeforeUnmount(() => {
   width: 280px;
   height: 280px;
   background: radial-gradient(circle, rgba(139, 92, 246, 0.22), transparent 75%);
+}
+.parallax-shard {
+  position: absolute;
+  width: 140px;
+  height: 220px;
+  border-radius: 28px;
+  opacity: 0.28;
+  filter: blur(0);
+  background: linear-gradient(150deg, rgba(15, 118, 110, 0.4), rgba(59, 130, 246, 0.25));
+  transform: rotate(12deg);
+}
+.shard-1 {
+  top: 120px;
+  left: 8%;
+}
+.shard-2 {
+  top: 520px;
+  right: 6%;
+  width: 180px;
+  height: 260px;
+  background: linear-gradient(140deg, rgba(59, 130, 246, 0.35), rgba(139, 92, 246, 0.2));
+}
+.shard-3 {
+  bottom: 120px;
+  left: 16%;
+  width: 160px;
+  height: 240px;
+  background: linear-gradient(160deg, rgba(16, 185, 129, 0.3), rgba(59, 130, 246, 0.2));
 }
 .hero-layout {
   display: grid;
@@ -1402,6 +1166,7 @@ onBeforeUnmount(() => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 22px;
   align-items: stretch;
+  perspective: 1200px;
 }
 .preview-card {
   background: var(--panel-bg);
@@ -1409,6 +1174,13 @@ onBeforeUnmount(() => {
   border-radius: 20px;
   text-align: left;
   box-shadow: var(--shadow);
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.preview-card:hover {
+  transform: translateY(-6px) rotateX(2deg) rotateY(-2deg);
+  box-shadow: 0 22px 40px rgba(15, 118, 110, 0.16);
+  border-color: rgba(15, 118, 110, 0.3);
 }
 .preview-card :deep(.el-card__body) {
   padding: 24px;
@@ -1463,6 +1235,7 @@ onBeforeUnmount(() => {
   color: var(--muted);
 }
 
+
 .feature-section,
 .learning-path,
 .method-section,
@@ -1474,6 +1247,7 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+  perspective: 1200px;
 }
 .feature-card {
   padding: 18px 20px;
@@ -1481,6 +1255,13 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 16px 30px rgba(15, 118, 110, 0.08);
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.feature-card:hover {
+  transform: translateY(-6px) rotateX(3deg) rotateY(-3deg);
+  box-shadow: 0 22px 40px rgba(15, 118, 110, 0.18);
+  border-color: rgba(15, 118, 110, 0.4);
 }
 .feature-title {
   font-size: 15px;
@@ -1513,10 +1294,8 @@ onBeforeUnmount(() => {
 }
 .path-track {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 1fr);
-  gap: 16px;
-  padding-bottom: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
 }
 .path-step {
   padding: 16px 18px;
@@ -1546,6 +1325,7 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+  perspective: 1200px;
 }
 .method-card {
   padding: 18px;
@@ -1553,6 +1333,13 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 16px 30px rgba(59, 130, 246, 0.08);
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.method-card:hover {
+  transform: translateY(-6px) rotateX(3deg) rotateY(3deg);
+  box-shadow: 0 22px 40px rgba(59, 130, 246, 0.18);
+  border-color: rgba(59, 130, 246, 0.35);
 }
 .method-title {
   font-size: 15px;
@@ -1583,6 +1370,7 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+  perspective: 1200px;
 }
 .outcome-card {
   padding: 20px;
@@ -1590,6 +1378,12 @@ onBeforeUnmount(() => {
   background: #0f172a;
   color: #f8fafc;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.25);
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.outcome-card:hover {
+  transform: translateY(-6px) rotateX(2deg) rotateY(-2deg);
+  box-shadow: 0 26px 50px rgba(15, 23, 42, 0.35);
 }
 .outcome-value {
   font-size: 22px;
@@ -1620,6 +1414,12 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 16px;
   align-items: flex-start;
+  transform-style: preserve-3d;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+.cta-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 30px 60px rgba(15, 118, 110, 0.25);
 }
 .cta-title {
   font-size: 22px;
@@ -1680,7 +1480,7 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
   .path-track {
-    grid-auto-columns: minmax(200px, 1fr);
+    grid-template-columns: 1fr;
   }
   .cta-card {
     align-items: center;
@@ -1688,6 +1488,15 @@ onBeforeUnmount(() => {
   }
   .cta-actions {
     justify-content: center;
+  }
+  .stage-panels {
+    height: 100vh;
+  }
+  .stage-card {
+    padding: 22px;
+  }
+  .parallax-shard {
+    opacity: 0.18;
   }
   .preview {
     grid-template-columns: 1fr;

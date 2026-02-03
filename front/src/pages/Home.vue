@@ -259,6 +259,8 @@ import { useAuthStore } from '../stores/authStore';
 import logo from '../assets/light03-logo.svg';
 import { homeCopy, type HomeLocale } from '../i18n/home';
 
+type AlgoTab = { key: string; title: string; desc: string; tags: string[] };
+
 const router = useRouter();
 const auth = useAuthStore();
 const authDialogOpen = ref<boolean>(false);
@@ -273,7 +275,7 @@ let handleKeydown: ((event: KeyboardEvent) => void) | null = null;
 
 const locale = ref<HomeLocale>('zh');
 const t = computed(() => homeCopy[locale.value]);
-const algoTabs = computed(() => t.value.modules.tabs);
+const algoTabs = computed<AlgoTab[]>(() => t.value.modules.tabs);
 const previewCards = computed(() => t.value.preview.cards);
 const activeTabKey = ref(algoTabs.value[0]?.key ?? 'linked-list');
 const prevTabIndex = ref(0);

@@ -20,6 +20,19 @@ export interface VizState {
   highlightLines?: [number, number];
 }
 
+/** 通用步骤类型 */
+export interface TraceStep {
+  type: string;
+  node?: NodeId;
+  neighbor?: NodeId;
+  state: VizState;
+}
+
+/** 通用 trace */
+export interface AlgorithmTrace {
+  steps: TraceStep[];
+}
+
 /** BFS 步骤类型 */
 export type BfsStepType =
   | 'init'           // 初始化：起点入队
@@ -30,7 +43,7 @@ export type BfsStepType =
   | 'finish';        // 结束
 
 /** BFS 单步 trace */
-export interface BfsStep {
+export interface BfsStep extends TraceStep {
   type: BfsStepType;
   node?: NodeId;      // 当前处理的节点
   neighbor?: NodeId;  // 当前检查的邻居
@@ -38,8 +51,30 @@ export interface BfsStep {
 }
 
 /** BFS 完整 trace */
-export interface BfsTrace {
+export interface BfsTrace extends AlgorithmTrace {
   steps: BfsStep[];
+}
+
+/** DFS 步骤类型 */
+export type DfsStepType =
+  | 'init'           // 初始化：起点入栈
+  | 'pop'            // 出栈：取出栈顶节点
+  | 'check-neighbor' // 检查邻居
+  | 'push'           // 入栈：邻居入栈
+  | 'skip-visited'   // 跳过：已访问的邻居
+  | 'finish';        // 结束
+
+/** DFS 单步 trace */
+export interface DfsStep extends TraceStep {
+  type: DfsStepType;
+  node?: NodeId;
+  neighbor?: NodeId;
+  state: VizState;
+}
+
+/** DFS 完整 trace */
+export interface DfsTrace extends AlgorithmTrace {
+  steps: DfsStep[];
 }
 
 /** 创建初始可视化状态 */
@@ -61,7 +96,7 @@ export function createInitialVizState(
     nodeStates,
     edgeStates,
     queue: [],
-    note: '准备开始 BFS...',
+    note: '准备开始遍历...',
   };
 }
 

@@ -17,7 +17,7 @@ export const sideMenuSections: MenuSection[] = [
     title: '图',
     items: [
       { id: 'bfs', label: 'BFS 广度优先搜索', algoKey: 'bfs' },
-      { id: 'dfs', label: 'DFS 深度优先搜索', disabled: true },
+      { id: 'dfs', label: 'DFS 深度优先搜索', algoKey: 'dfs' },
     ],
   },
   {

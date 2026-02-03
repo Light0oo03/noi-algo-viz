@@ -1,12 +1,17 @@
 import { defineStore } from 'pinia';
+import axios from 'axios';
 import { computed, ref } from 'vue';
-import { apiUrl } from '../config/api';
+import * as authApi from '../api/auth';
 
 type User = { id: string; email: string };
 
-async function readJson(res: Response) {
-  const text = await res.text();
-  return text ? JSON.parse(text) : null;
+function unwrapAxiosError(error: unknown) {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data;
+    if (data) return data;
+    if (error.message) return { message: error.message };
+  }
+  return error;
 }
 
 export const useAuthStore = defineStore(
@@ -18,38 +23,27 @@ export const useAuthStore = defineStore(
     const isAuthed = computed(() => Boolean(token.value));
 
     async function register(email: string, password: string) {
-      const res = await fetch(apiUrl('/auth/register'), {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await readJson(res);
-      if (!res.ok) throw data;
-      return data;
+      try {
+        return await authApi.register(email, password);
+      } catch (error) {
+        throw unwrapAxiosError(error);
+      }
     }
 
     async function login(email: string, password: string) {
-      const res = await fetch(apiUrl('/auth/login'), {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await readJson(res);
-      if (!res.ok) throw data;
-      token.value = data.token;
-      user.value = data.user;
+      try {
+        const data = await authApi.login(email, password);
+        token.value = data.token;
+        user.value = data.user;
+      } catch (error) {
+        throw unwrapAxiosError(error);
+      }
     }
 
     async function logout() {
       if (token.value) {
         try {
-          await fetch(apiUrl('/auth/logout'), {
-            method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-              authorization: `Bearer ${token.value}`,
-            },
-          });
+          await authApi.logout(token.value);
         } catch (e) {
           console.error('Logout log failed:', e);
         }

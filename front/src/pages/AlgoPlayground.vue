@@ -5,7 +5,7 @@
         <div class="title">NOI 算法可视化学习平台（MVP）</div>
         <el-button class="ghost-btn" size="small" plain @click="goHome">返回首页</el-button>
       </div>
-      <div class="sub">当前：无向图 / BFS（起点固定为 0，邻居按 id 升序）</div>
+      <div class="sub">{{ currentAlgoDesc }}</div>
       <div class="auth">
         <template v-if="auth.isAuthed">
           <span class="auth-user">{{ auth.user?.email }}</span>
@@ -66,12 +66,13 @@
           @disabled-action="onDisabledGraphAction"
         />
         <div class="floating-panel">
-          <StatePanel
-            :note="vizState.note"
-            :queue="vizState.queue"
-            :player-status="playerStatus"
-            :node-states="vizState.nodeStates"
-          />
+        <StatePanel
+          :note="vizState.note"
+          :queue="vizState.queue"
+          :player-status="playerStatus"
+          :node-states="vizState.nodeStates"
+          :algo="selectedAlgo"
+        />
         </div>
       </el-main>
 
@@ -144,7 +145,9 @@ import { sideMenuSections } from '../config/sideMenu';
 import type { Graph } from '../core/graph/types';
 import { edgeKey } from '../core/graph/types';
 import { generateBfsTrace } from '../core/algorithms/bfs';
+import { generateDfsTrace } from '../core/algorithms/dfs';
 import { BFS_CODE_JS } from '../core/algorithms/bfs-code';
+import { DFS_CODE_JS } from '../core/algorithms/dfs-code';
 import { TracePlayer, createInitialStateFromGraph } from '../core/trace/TracePlayer';
 import type { PlayerStatus } from '../core/trace/TracePlayer';
 import type { VizState } from '../core/trace/types';
@@ -235,6 +238,8 @@ const currentAlgoCode = computed(() => {
   switch (selectedAlgo.value) {
     case 'bfs':
       return BFS_CODE_JS;
+    case 'dfs':
+      return DFS_CODE_JS;
     default:
       return BFS_CODE_JS;
   }
@@ -244,8 +249,21 @@ const currentAlgoTitle = computed(() => {
   switch (selectedAlgo.value) {
     case 'bfs':
       return 'BFS 广度优先搜索';
+    case 'dfs':
+      return 'DFS 深度优先搜索';
     default:
       return '算法代码';
+  }
+});
+
+const currentAlgoDesc = computed(() => {
+  switch (selectedAlgo.value) {
+    case 'bfs':
+      return '当前：无向图 / BFS（起点固定为 0，邻居按 id 升序）';
+    case 'dfs':
+      return '当前：无向图 / DFS（起点固定为 0，邻居按 id 升序，入栈时逆序）';
+    default:
+      return '当前：无向图 / 算法未选择';
   }
 });
 
@@ -334,6 +352,24 @@ function generateTrace() {
     // 更新播放器初始状态
     player.updateInitialState(getInitialState(graph.value));
     
+    // 加载 trace
+    player.load(trace);
+    return true;
+  }
+  if (selectedAlgo.value === 'dfs') {
+    const startNode = 0;
+
+    // 检查起点是否存在
+    if (!graph.value.nodes.some((n) => n.id === startNode)) {
+      vizState.note = `错误：起点节点 ${startNode} 不存在！请先添加节点 0。`;
+      return false;
+    }
+
+    const trace = generateDfsTrace(graph.value, startNode);
+
+    // 更新播放器初始状态
+    player.updateInitialState(getInitialState(graph.value));
+
     // 加载 trace
     player.load(trace);
     return true;

@@ -16,6 +16,7 @@
     <div class="bar">
       <el-select v-model="algoValue" size="small" class="algo-select">
         <el-option label="BFS（广度优先搜索）" value="bfs" />
+        <el-option label="DFS（深度优先搜索）" value="dfs" />
       </el-select>
 
       <el-button size="small" :disabled="currentStep <= 0 || status === 'playing'" @click="$emit('stepBack')">上一步</el-button>

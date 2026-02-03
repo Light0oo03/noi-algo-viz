@@ -3,8 +3,7 @@
  * 采用方案1：每步播放后通过回调通知外部更新 Vue 响应式状态
  */
 
-import type { BfsTrace } from './types';
-import type { VizState } from './types';
+import type { AlgorithmTrace, VizState } from './types';
 import { cloneVizState, createInitialVizState } from './types';
 
 export type PlayerStatus = 'idle' | 'ready' | 'playing' | 'paused' | 'ended';
@@ -19,7 +18,7 @@ export interface TracePlayerOptions {
 }
 
 export class TracePlayer {
-  private trace: BfsTrace | null = null;
+  private trace: AlgorithmTrace | null = null;
   private currentIndex: number = 0;
   private timer: number | null = null;
   private _status: PlayerStatus = 'idle';
@@ -70,7 +69,7 @@ export class TracePlayer {
   }
 
   /** 加载 trace */
-  load(trace: BfsTrace) {
+  load(trace: AlgorithmTrace) {
     this.stop();
     this.trace = trace;
     this.currentIndex = -1; // -1 表示还没开始

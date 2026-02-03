@@ -6,7 +6,7 @@
     </div>
 
     <div class="section">
-      <div class="section-title">📋 队列</div>
+      <div class="section-title">📋 {{ queueTitle }}</div>
       <div class="queue">
         <span v-if="queue.length === 0" class="empty">空</span>
         <span v-for="(id, idx) in queue" :key="idx" class="pill">{{ id }}</span>
@@ -37,6 +37,7 @@ const props = defineProps<{
   queue: number[];
   playerStatus: 'idle' | 'ready' | 'playing' | 'paused' | 'ended';
   nodeStates: Record<number, NodeVizState>;
+  algo: string;
 }>();
 
 const showNodeStates = ref(false);
@@ -47,10 +48,12 @@ const sortedNodeStates = computed(() => {
   return entries;
 });
 
+const queueTitle = computed(() => (props.algo === 'dfs' ? '栈' : '队列'));
+
 function stateText(st: NodeVizState) {
   switch (st) {
     case 'default': return '默认';
-    case 'frontier': return '已入队';
+    case 'frontier': return props.algo === 'dfs' ? '已入栈' : '已入队';
     case 'selected': return '当前';
     case 'visited': return '已访问';
   }

@@ -29,3 +29,4 @@ backend/src/generated/prisma
 *.sw?
 
 .cursor/
+.trae/

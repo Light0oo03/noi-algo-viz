@@ -68,6 +68,7 @@ export function generateDfsTrace(graph: Graph, start: NodeId): DfsTrace {
     const neighbors = adj.get(current) ?? [];
     for (let i = neighbors.length - 1; i >= 0; i--) {
       const neighbor = neighbors[i];
+      if (neighbor === undefined) continue;
       const ek = edgeKey(current, neighbor);
 
       // 检查邻居步骤

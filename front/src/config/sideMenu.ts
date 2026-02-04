@@ -18,12 +18,21 @@ export const sideMenuSections: MenuSection[] = [
     items: [
       { id: 'bfs', label: 'BFS 广度优先搜索', algoKey: 'bfs' },
       { id: 'dfs', label: 'DFS 深度优先搜索', algoKey: 'dfs' },
+      { id: 'dijkstra', label: 'Dijkstra 最短路径', algoKey: 'dijkstra' },
+      { id: 'prim', label: 'Prim 最小生成树', algoKey: 'prim' },
+      { id: 'kruskal', label: 'Kruskal 最小生成树', algoKey: 'kruskal' },
     ],
   },
   {
     id: 'list',
     title: '链表',
-    items: [{ id: 'list-placeholder', label: '敬请期待', disabled: true }],
+    items: [
+      { id: 'reverse', label: '反转链表', algoKey: 'reverse' },
+      { id: 'middle', label: '链表中点（快慢指针）', algoKey: 'middle' },
+      { id: 'cycle', label: '判断环（Floyd）', algoKey: 'cycle' },
+      { id: 'merge', label: '合并有序链表', algoKey: 'merge' },
+      { id: 'remove-k', label: '删除倒数第 k 个', algoKey: 'remove-k' },
+    ],
   },
   {
     id: 'stack',

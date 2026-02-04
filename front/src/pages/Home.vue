@@ -7,6 +7,7 @@
       </div>
       <nav class="home-nav">
         <span class="nav-item nav-item--action" @click="goPlayground">{{ t.nav.visual }}</span>
+        <span class="nav-item nav-item--action" @click="goLinkedList">{{ t.nav.list }}</span>
         <span class="nav-item nav-item--action">{{ t.nav.editor }}</span>
       </nav>
       <div class="home-actions">
@@ -285,6 +286,10 @@ const activeTab = computed(() => algoTabs.value.find((tab) => tab.key === active
 
 function goPlayground() {
   void router.push('/playground');
+}
+
+function goLinkedList() {
+  void router.push('/linked-list');
 }
 
 type ToastKind = 'success' | 'error' | 'info';

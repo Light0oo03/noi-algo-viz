@@ -1,6 +1,5 @@
 <template>
   <div class="player-controls">
-    <!-- 进度条 -->
     <div class="progress-wrapper" v-if="totalSteps > 0">
       <el-slider
         v-model="sliderValue"
@@ -12,22 +11,21 @@
       <div class="progress-text">{{ currentStep }} / {{ totalSteps }}</div>
     </div>
 
-    <!-- 控制按钮 -->
     <div class="bar">
       <el-select v-model="algoValue" size="small" class="algo-select">
-        <el-option label="BFS（广度优先搜索）" value="bfs" />
-        <el-option label="DFS（深度优先搜索）" value="dfs" />
-        <el-option label="Dijkstra（最短路径）" value="dijkstra" />
-        <el-option label="Prim（最小生成树）" value="prim" />
-        <el-option label="Kruskal（最小生成树）" value="kruskal" />
+        <el-option label="反转链表" value="reverse" />
+        <el-option label="链表中点" value="middle" />
+        <el-option label="判断环" value="cycle" />
+        <el-option label="合并有序链表" value="merge" />
+        <el-option label="删除倒数第 k 个" value="remove-k" />
       </el-select>
+
+      <slot name="extra" />
 
       <el-button size="small" :disabled="currentStep <= 0 || status === 'playing'" @click="$emit('stepBack')">上一步</el-button>
       <el-button size="small" type="primary" @click="onPlayPause">{{ status === 'playing' ? '暂停' : '播放' }}</el-button>
       <el-button size="small" :disabled="status === 'ended'" @click="$emit('step')">下一步</el-button>
       <el-button size="small" @click="$emit('reset')">重置动画</el-button>
-      <el-button size="small" type="warning" @click="$emit('resetGraph')">恢复默认图</el-button>
-
       <div class="status">状态：{{ statusLabel }}</div>
     </div>
   </div>
@@ -49,7 +47,6 @@ const emit = defineEmits<{
   (e: 'step'): void;
   (e: 'stepBack'): void;
   (e: 'reset'): void;
-  (e: 'resetGraph'): void;
   (e: 'goToStep', step: number): void;
   (e: 'update:selectedAlgo', algo: string): void;
 }>();
@@ -124,16 +121,17 @@ function onPlayPause() {
 }
 
 .algo-select {
-  min-width: 140px;
-  width: 160px;
+  min-width: 160px;
+  width: 180px;
 }
+
 .status {
   margin-left: auto;
   font-size: 12px;
   color: var(--muted-2);
 }
 
-:deep(.el-slider__runway) {
+::deep(.el-slider__runway) {
   margin-top: 6px;
 }
 </style>

@@ -48,12 +48,27 @@ const sortedNodeStates = computed(() => {
   return entries;
 });
 
-const queueTitle = computed(() => (props.algo === 'dfs' ? '栈' : '队列'));
+const queueTitle = computed(() => {
+  switch (props.algo) {
+    case 'dfs':
+      return '栈';
+    case 'dijkstra':
+    case 'prim':
+      return '优先队列';
+    case 'kruskal':
+      return '边序列';
+    default:
+      return '队列';
+  }
+});
 
 function stateText(st: NodeVizState) {
   switch (st) {
     case 'default': return '默认';
-    case 'frontier': return props.algo === 'dfs' ? '已入栈' : '已入队';
+    case 'frontier':
+      if (props.algo === 'dfs') return '已入栈';
+      if (props.algo === 'dijkstra' || props.algo === 'prim') return '候选';
+      return '已入队';
     case 'selected': return '当前';
     case 'visited': return '已访问';
   }

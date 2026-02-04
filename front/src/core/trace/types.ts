@@ -77,6 +77,72 @@ export interface DfsTrace extends AlgorithmTrace {
   steps: DfsStep[];
 }
 
+/** Dijkstra 步骤类型 */
+export type DijkstraStepType =
+  | 'init'           // 初始化
+  | 'extract-min'    // 取出最小距离节点
+  | 'check-neighbor' // 检查邻居
+  | 'relax'          // 松弛更新
+  | 'no-relax'       // 未更新
+  | 'skip-visited'   // 跳过已访问邻居
+  | 'finish';        // 结束
+
+/** Dijkstra 单步 trace */
+export interface DijkstraStep extends TraceStep {
+  type: DijkstraStepType;
+  node?: NodeId;
+  neighbor?: NodeId;
+  state: VizState;
+}
+
+/** Dijkstra 完整 trace */
+export interface DijkstraTrace extends AlgorithmTrace {
+  steps: DijkstraStep[];
+}
+
+/** Prim 步骤类型 */
+export type PrimStepType =
+  | 'init'        // 初始化
+  | 'pick-edge'   // 选取最小边
+  | 'check-edge'  // 检查边
+  | 'add-edge'    // 加入生成树
+  | 'skip-edge'   // 跳过无效边
+  | 'finish';     // 结束
+
+/** Prim 单步 trace */
+export interface PrimStep extends TraceStep {
+  type: PrimStepType;
+  node?: NodeId;
+  neighbor?: NodeId;
+  state: VizState;
+}
+
+/** Prim 完整 trace */
+export interface PrimTrace extends AlgorithmTrace {
+  steps: PrimStep[];
+}
+
+/** Kruskal 步骤类型 */
+export type KruskalStepType =
+  | 'init'       // 初始化
+  | 'check-edge' // 检查边
+  | 'add-edge'   // 加入生成树
+  | 'skip-edge'  // 跳过成环边
+  | 'finish';    // 结束
+
+/** Kruskal 单步 trace */
+export interface KruskalStep extends TraceStep {
+  type: KruskalStepType;
+  node?: NodeId;
+  neighbor?: NodeId;
+  state: VizState;
+}
+
+/** Kruskal 完整 trace */
+export interface KruskalTrace extends AlgorithmTrace {
+  steps: KruskalStep[];
+}
+
 /** 创建初始可视化状态 */
 export function createInitialVizState(
   nodeIds: NodeId[],

@@ -4,6 +4,7 @@ export const homeCopy = {
   zh: {
     nav: {
       visual: '算法可视化',
+      list: '链表可视化',
       editor: '算法编辑器',
     },
     actions: {
@@ -184,6 +185,7 @@ export const homeCopy = {
   en: {
     nav: {
       visual: 'Visualization',
+      list: 'Linked List Visuals',
       editor: 'Algorithm Editor',
     },
     actions: {

@@ -56,6 +56,7 @@
 
       <el-main class="center">
         <GraphCanvas
+          v-if="!isListAlgo"
           :graph="graph"
           :node-states="vizState.nodeStates"
           :edge-states="vizState.edgeStates"
@@ -65,14 +66,17 @@
           @note="setNote"
           @disabled-action="onDisabledGraphAction"
         />
+        <LinkedListCanvas v-else :state="listVizState" />
         <div class="floating-panel">
-        <StatePanel
-          :note="vizState.note"
-          :queue="vizState.queue"
-          :player-status="playerStatus"
-          :node-states="vizState.nodeStates"
-          :algo="selectedAlgo"
-        />
+          <StatePanel
+            v-if="!isListAlgo"
+            :note="vizState.note"
+            :queue="vizState.queue"
+            :player-status="graphPlayerStatus"
+            :node-states="vizState.nodeStates"
+            :algo="selectedAlgo"
+          />
+          <LinkedListStatePanel v-else :note="listVizState.note" :state="listVizState" />
         </div>
       </el-main>
 
@@ -81,14 +85,15 @@
           :code="currentAlgoCode"
           :title="currentAlgoTitle"
           language="JavaScript"
-          :highlight-lines="vizState.highlightLines"
+          :highlight-lines="currentHighlightLines"
         />
       </el-aside>
     </el-container>
 
     <el-footer class="footer">
       <PlayerControls
-        :status="playerStatus"
+        v-if="!isListAlgo"
+        :status="graphPlayerStatus"
         :current-step="currentStep"
         :total-steps="totalSteps"
         :selected-algo="selectedAlgo"
@@ -101,6 +106,32 @@
         @reset-graph="resetGraphToDefault"
         @go-to-step="goToStep"
       />
+      <LinkedListControls
+        v-else
+        :status="listPlayerStatus"
+        :current-step="listCurrentStep"
+        :total-steps="listTotalSteps"
+        :selected-algo="selectedAlgo"
+        @update:selected-algo="selectedAlgo = $event"
+        @play="play"
+        @pause="pause"
+        @step="step"
+        @step-back="stepBack"
+        @reset="reset"
+        @go-to-step="goToStep"
+      >
+        <template #extra>
+          <el-input-number
+            v-if="selectedAlgo === 'remove-k'"
+            v-model="removeK"
+            :min="1"
+            :max="8"
+            size="small"
+            class="k-input"
+            controls-position="right"
+          />
+        </template>
+      </LinkedListControls>
     </el-footer>
 
     <el-dialog v-model="authDialogOpen" title="登录 / 注册" width="360px">
@@ -138,6 +169,9 @@ import { storeToRefs } from 'pinia';
 import GraphCanvas from '../components/GraphCanvas.vue';
 import PlayerControls from '../components/PlayerControls.vue';
 import StatePanel from '../components/StatePanel.vue';
+import LinkedListCanvas from '../components/LinkedListCanvas.vue';
+import LinkedListControls from '../components/LinkedListControls.vue';
+import LinkedListStatePanel from '../components/LinkedListStatePanel.vue';
 import CodeViewer from '../components/CodeViewer.vue';
 import { sideMenuSections } from '../config/sideMenu';
 
@@ -146,11 +180,31 @@ import type { Graph } from '../core/graph/types';
 import { edgeKey } from '../core/graph/types';
 import { generateBfsTrace } from '../core/algorithms/bfs';
 import { generateDfsTrace } from '../core/algorithms/dfs';
+import { generateDijkstraTrace } from '../core/algorithms/dijkstra';
+import { generatePrimTrace } from '../core/algorithms/prim';
+import { generateKruskalTrace } from '../core/algorithms/kruskal';
 import { BFS_CODE_JS } from '../core/algorithms/bfs-code';
 import { DFS_CODE_JS } from '../core/algorithms/dfs-code';
+import { DIJKSTRA_CODE_JS } from '../core/algorithms/dijkstra-code';
+import { PRIM_CODE_JS } from '../core/algorithms/prim-code';
+import { KRUSKAL_CODE_JS } from '../core/algorithms/kruskal-code';
 import { TracePlayer, createInitialStateFromGraph } from '../core/trace/TracePlayer';
 import type { PlayerStatus } from '../core/trace/TracePlayer';
 import type { VizState } from '../core/trace/types';
+import { ListTracePlayer, type ListPlayerStatus } from '../core/linked-list/TracePlayer';
+import type { ListView, ListVizState } from '../core/linked-list/types';
+import { createInitialListVizState } from '../core/linked-list/types';
+import { buildList } from '../core/linked-list/utils';
+import { generateReverseTrace } from '../core/linked-list/reverse';
+import { generateMiddleTrace } from '../core/linked-list/middle';
+import { generateCycleTrace } from '../core/linked-list/cycle';
+import { generateMergeTrace } from '../core/linked-list/merge';
+import { generateRemoveKTrace } from '../core/linked-list/remove-k';
+import { REVERSE_CODE_JS } from '../core/linked-list/reverse-code';
+import { MIDDLE_CODE_JS } from '../core/linked-list/middle-code';
+import { CYCLE_CODE_JS } from '../core/linked-list/cycle-code';
+import { MERGE_CODE_JS } from '../core/linked-list/merge-code';
+import { REMOVE_K_CODE_JS } from '../core/linked-list/remove-k-code';
 
 // 导入 Pinia store
 import { useGraphStore } from '../stores/graphStore';
@@ -189,9 +243,17 @@ function clearAuthForm() {
   authError.value = '';
 }
 
-const canEditGraph = computed(() => auth.isAuthed && playerStatus.value !== 'playing');
+const isListAlgo = computed(() => (
+  selectedAlgo.value === 'reverse'
+  || selectedAlgo.value === 'middle'
+  || selectedAlgo.value === 'cycle'
+  || selectedAlgo.value === 'merge'
+  || selectedAlgo.value === 'remove-k'
+));
+
+const canEditGraph = computed(() => auth.isAuthed && graphPlayerStatus.value !== 'playing' && !isListAlgo.value);
 const disabledHint = computed(() => {
-  if (playerStatus.value === 'playing') return '播放中：已禁用编辑';
+  if (graphPlayerStatus.value === 'playing') return '播放中：已禁用编辑';
   if (!auth.isAuthed) return '未登录：请先登录后编辑';
   return '已禁用编辑';
 });
@@ -220,9 +282,9 @@ function syncVizState(state: VizState) {
 }
 
 // ---------------------------
-// 播放器状态
+// 播放器状态（图）
 // ---------------------------
-const playerStatus = ref<PlayerStatus>('idle');
+const graphPlayerStatus = ref<PlayerStatus>('idle');
 const currentStep = ref<number>(0);
 const totalSteps = ref<number>(0);
 const selectedAlgo = ref<string>('bfs');
@@ -240,6 +302,22 @@ const currentAlgoCode = computed(() => {
       return BFS_CODE_JS;
     case 'dfs':
       return DFS_CODE_JS;
+    case 'dijkstra':
+      return DIJKSTRA_CODE_JS;
+    case 'prim':
+      return PRIM_CODE_JS;
+    case 'kruskal':
+      return KRUSKAL_CODE_JS;
+    case 'reverse':
+      return REVERSE_CODE_JS;
+    case 'middle':
+      return MIDDLE_CODE_JS;
+    case 'cycle':
+      return CYCLE_CODE_JS;
+    case 'merge':
+      return MERGE_CODE_JS;
+    case 'remove-k':
+      return REMOVE_K_CODE_JS;
     default:
       return BFS_CODE_JS;
   }
@@ -251,8 +329,51 @@ const currentAlgoTitle = computed(() => {
       return 'BFS 广度优先搜索';
     case 'dfs':
       return 'DFS 深度优先搜索';
+    case 'dijkstra':
+      return 'Dijkstra 最短路径';
+    case 'prim':
+      return 'Prim 最小生成树';
+    case 'kruskal':
+      return 'Kruskal 最小生成树';
+    case 'reverse':
+      return '反转链表';
+    case 'middle':
+      return '链表中点（快慢指针）';
+    case 'cycle':
+      return '判断环（Floyd）';
+    case 'merge':
+      return '合并两个有序链表';
+    case 'remove-k':
+      return '删除倒数第 k 个节点';
     default:
       return '算法代码';
+  }
+});
+
+const currentAlgoName = computed(() => {
+  switch (selectedAlgo.value) {
+    case 'bfs':
+      return 'BFS 广度优先搜索';
+    case 'dfs':
+      return 'DFS 深度优先搜索';
+    case 'dijkstra':
+      return 'Dijkstra 最短路径';
+    case 'prim':
+      return 'Prim 最小生成树';
+    case 'kruskal':
+      return 'Kruskal 最小生成树';
+    case 'reverse':
+      return '反转链表';
+    case 'middle':
+      return '链表中点（快慢指针）';
+    case 'cycle':
+      return '判断环（Floyd）';
+    case 'merge':
+      return '合并两个有序链表';
+    case 'remove-k':
+      return '删除倒数第 k 个节点';
+    default:
+      return '算法';
   }
 });
 
@@ -262,25 +383,106 @@ const currentAlgoDesc = computed(() => {
       return '当前：无向图 / BFS（起点固定为 0，邻居按 id 升序）';
     case 'dfs':
       return '当前：无向图 / DFS（起点固定为 0，邻居按 id 升序，入栈时逆序）';
+    case 'dijkstra':
+      return '当前：无向图 / Dijkstra（起点固定为 0，边权参与计算）';
+    case 'prim':
+      return '当前：无向图 / Prim（起点固定为 0，边权参与计算）';
+    case 'kruskal':
+      return '当前：无向图 / Kruskal（边权参与计算）';
+    case 'reverse':
+      return '当前：链表 / 反转链表';
+    case 'middle':
+      return '当前：链表 / 中点（快慢指针）';
+    case 'cycle':
+      return '当前：链表 / 判断环（Floyd）';
+    case 'merge':
+      return '当前：链表 / 合并两个有序链表';
+    case 'remove-k':
+      return `当前：链表 / 删除倒数第 k 个（k=${removeK.value}）`;
     default:
       return '当前：无向图 / 算法未选择';
   }
 });
 
+const currentHighlightLines = computed(() => (
+  isListAlgo.value ? listVizState.highlightLines : vizState.highlightLines
+));
+
 // ---------------------------
-// TracePlayer 实例
+// TracePlayer 实例（图）
 // ---------------------------
-const player = new TracePlayer(getInitialState(graph.value), {
+const graphPlayer = new TracePlayer(getInitialState(graph.value), {
   interval: 600,
   onStateChange: (state) => {
     syncVizState(state);
     // 更新步骤信息（stepIndex 是 0-based，显示时 +1）
-    currentStep.value = player.stepIndex + 1;
+    currentStep.value = graphPlayer.stepIndex + 1;
   },
   onStatusChange: (status) => {
-    playerStatus.value = status;
-    totalSteps.value = player.totalSteps;
-    currentStep.value = player.stepIndex + 1;
+    graphPlayerStatus.value = status;
+    totalSteps.value = graphPlayer.totalSteps;
+    currentStep.value = graphPlayer.stepIndex + 1;
+  },
+});
+
+// ---------------------------
+// 链表可视化状态与播放器
+// ---------------------------
+const removeK = ref<number>(2);
+
+function buildListsForAlgo(algo: string): ListView[] {
+  switch (algo) {
+    case 'merge': {
+      const listA = buildList([1, 4, 7], { id: 'list-a', label: '链表 A', startId: 1 });
+      const listB = buildList([2, 3, 8], { id: 'list-b', label: '链表 B', startId: 10 });
+      return [listA, listB];
+    }
+    case 'cycle': {
+      const list = buildList([1, 2, 3, 4, 5, 6], {
+        id: 'list',
+        label: '链表',
+        startId: 1,
+        cycleAtIndex: 2,
+      });
+      return [list];
+    }
+    default: {
+      const list = buildList([1, 2, 3, 4, 5, 6], { id: 'list', label: '链表', startId: 1 });
+      return [list];
+    }
+  }
+}
+
+function buildInitialListState(algo: string): ListVizState {
+  const lists = buildListsForAlgo(algo);
+  return createInitialListVizState(lists, '提示：选择算法后点击播放或单步。');
+}
+
+const listVizState = reactive<ListVizState>(buildInitialListState(selectedAlgo.value));
+
+function syncListVizState(state: ListVizState) {
+  listVizState.lists = state.lists;
+  listVizState.nodeStates = state.nodeStates;
+  listVizState.pointers = state.pointers;
+  listVizState.edgeHighlights = state.edgeHighlights;
+  listVizState.note = state.note;
+  listVizState.highlightLines = state.highlightLines;
+}
+
+const listPlayerStatus = ref<ListPlayerStatus>('idle');
+const listCurrentStep = ref<number>(0);
+const listTotalSteps = ref<number>(0);
+
+const listPlayer = new ListTracePlayer(buildInitialListState(selectedAlgo.value), {
+  interval: 600,
+  onStateChange: (state) => {
+    syncListVizState(state);
+    listCurrentStep.value = listPlayer.stepIndex + 1;
+  },
+  onStatusChange: (status) => {
+    listPlayerStatus.value = status;
+    listTotalSteps.value = listPlayer.totalSteps;
+    listCurrentStep.value = listPlayer.stepIndex + 1;
   },
 });
 
@@ -350,10 +552,10 @@ function generateTrace() {
     const trace = generateBfsTrace(graph.value, startNode);
     
     // 更新播放器初始状态
-    player.updateInitialState(getInitialState(graph.value));
+    graphPlayer.updateInitialState(getInitialState(graph.value));
     
     // 加载 trace
-    player.load(trace);
+    graphPlayer.load(trace);
     return true;
   }
   if (selectedAlgo.value === 'dfs') {
@@ -368,11 +570,88 @@ function generateTrace() {
     const trace = generateDfsTrace(graph.value, startNode);
 
     // 更新播放器初始状态
-    player.updateInitialState(getInitialState(graph.value));
+    graphPlayer.updateInitialState(getInitialState(graph.value));
 
     // 加载 trace
-    player.load(trace);
+    graphPlayer.load(trace);
     return true;
+  }
+  if (selectedAlgo.value === 'dijkstra') {
+    const startNode = 0;
+
+    if (!graph.value.nodes.some((n) => n.id === startNode)) {
+      vizState.note = `错误：起点节点 ${startNode} 不存在！请先添加节点 0。`;
+      return false;
+    }
+
+    const trace = generateDijkstraTrace(graph.value, startNode);
+    graphPlayer.updateInitialState(getInitialState(graph.value));
+    graphPlayer.load(trace);
+    return true;
+  }
+  if (selectedAlgo.value === 'prim') {
+    const startNode = 0;
+
+    if (!graph.value.nodes.some((n) => n.id === startNode)) {
+      vizState.note = `错误：起点节点 ${startNode} 不存在！请先添加节点 0。`;
+      return false;
+    }
+
+    const trace = generatePrimTrace(graph.value, startNode);
+    graphPlayer.updateInitialState(getInitialState(graph.value));
+    graphPlayer.load(trace);
+    return true;
+  }
+  if (selectedAlgo.value === 'kruskal') {
+    if (graph.value.nodes.length === 0) {
+      vizState.note = '错误：图中没有节点，无法运行 Kruskal。';
+      return false;
+    }
+
+    const trace = generateKruskalTrace(graph.value);
+    graphPlayer.updateInitialState(getInitialState(graph.value));
+    graphPlayer.load(trace);
+    return true;
+  }
+
+  if (isListAlgo.value) {
+    const lists = buildListsForAlgo(selectedAlgo.value);
+    const initialState = createInitialListVizState(lists, '提示：选择算法后点击播放或单步。');
+    listPlayer.updateInitialState(initialState);
+
+    switch (selectedAlgo.value) {
+      case 'reverse': {
+        const list = lists[0];
+        if (!list) return false;
+        listPlayer.load(generateReverseTrace(list));
+        return true;
+      }
+      case 'middle': {
+        const list = lists[0];
+        if (!list) return false;
+        listPlayer.load(generateMiddleTrace(list));
+        return true;
+      }
+      case 'cycle': {
+        const list = lists[0];
+        if (!list) return false;
+        listPlayer.load(generateCycleTrace(list));
+        return true;
+      }
+      case 'merge': {
+        const listA = lists[0];
+        const listB = lists[1];
+        if (!listA || !listB) return false;
+        listPlayer.load(generateMergeTrace(listA, listB));
+        return true;
+      }
+      case 'remove-k': {
+        const list = lists[0];
+        if (!list) return false;
+        listPlayer.load(generateRemoveKTrace(list, removeK.value));
+        return true;
+      }
+    }
   }
   
   // 后续可以在这里添加其他算法
@@ -381,38 +660,73 @@ function generateTrace() {
 
 function play() {
   // 如果是 idle 状态，需要先生成 trace
-  if (playerStatus.value === 'idle') {
+  if (isListAlgo.value) {
+    if (listPlayerStatus.value === 'idle') {
+      if (!generateTrace()) {
+        return;
+      }
+    }
+    listPlayer.play();
+    return;
+  }
+  if (graphPlayerStatus.value === 'idle') {
     if (!generateTrace()) {
       return;
     }
   }
-  player.play();
+  graphPlayer.play();
 }
 
 function pause() {
-  player.pause();
+  if (isListAlgo.value) {
+    listPlayer.pause();
+    return;
+  }
+  graphPlayer.pause();
 }
 
 function step() {
   // 如果是 idle 状态，需要先生成 trace
-  if (playerStatus.value === 'idle') {
+  if (isListAlgo.value) {
+    if (listPlayerStatus.value === 'idle') {
+      if (!generateTrace()) {
+        return;
+      }
+    }
+    listPlayer.stepOnce();
+    return;
+  }
+  if (graphPlayerStatus.value === 'idle') {
     if (!generateTrace()) {
       return;
     }
   }
-  player.stepOnce();
+  graphPlayer.stepOnce();
 }
 
 function stepBack() {
-  player.stepBack();
+  if (isListAlgo.value) {
+    listPlayer.stepBack();
+    return;
+  }
+  graphPlayer.stepBack();
 }
 
 function goToStep(index: number) {
-  player.goToStep(index);
+  if (isListAlgo.value) {
+    listPlayer.goToStep(index);
+    return;
+  }
+  graphPlayer.goToStep(index);
 }
 
 function reset() {
-  player.reset();
+  if (isListAlgo.value) {
+    listPlayer.reset();
+    listVizState.note = '已重置。选择算法后点击播放或单步。';
+    return;
+  }
+  graphPlayer.reset();
   // 重置后恢复提示文本
   vizState.note = '已重置。双击空白添加节点；点击两个节点创建边。';
 }
@@ -434,8 +748,8 @@ const topoSig = ref<string>(graphTopologySignature(graph.value));
 function resetPlayerByGraph(next: Graph) {
   const keepNote = vizState.note;
   const newState = getInitialState(next);
-  player.updateInitialState(newState);
-  player.clear();
+  graphPlayer.updateInitialState(newState);
+  graphPlayer.clear();
   syncVizState(newState);
   vizState.note = keepNote;
   currentStep.value = 0;
@@ -450,13 +764,53 @@ watch(
     topoSig.value = nextSig;
 
     if (!sigChanged) return;
-    if (playerStatus.value === 'playing') {
-      player.pause();
+    if (graphPlayerStatus.value === 'playing') {
+      graphPlayer.pause();
     }
     resetPlayerByGraph(next);
   },
   { deep: false }
 );
+
+watch(
+  selectedAlgo,
+  () => {
+    if (isListAlgo.value) {
+      if (listPlayerStatus.value === 'playing') {
+        listPlayer.pause();
+      }
+      const newState = buildInitialListState(selectedAlgo.value);
+      listPlayer.updateInitialState(newState);
+      listPlayer.clear();
+      syncListVizState(newState);
+      listCurrentStep.value = 0;
+      listTotalSteps.value = 0;
+      listVizState.note = `已切换到 ${currentAlgoName.value}，可点击播放或单步开始。`;
+      return;
+    }
+    if (graphPlayerStatus.value === 'playing') {
+      graphPlayer.pause();
+    }
+    const newState = getInitialState(graph.value);
+    graphPlayer.updateInitialState(newState);
+    graphPlayer.clear();
+    syncVizState(newState);
+    currentStep.value = 0;
+    totalSteps.value = 0;
+    vizState.note = `已切换到 ${currentAlgoName.value}，可点击播放或单步开始。`;
+  }
+);
+
+watch(removeK, () => {
+  if (!isListAlgo.value || selectedAlgo.value !== 'remove-k') return;
+  const newState = buildInitialListState(selectedAlgo.value);
+  listPlayer.updateInitialState(newState);
+  listPlayer.clear();
+  syncListVizState(newState);
+  listCurrentStep.value = 0;
+  listTotalSteps.value = 0;
+  listVizState.note = `已更新 k=${removeK.value}，可重新播放。`;
+});
 
 function isEditingText(): boolean {
   const el = document.activeElement as HTMLElement | null;
@@ -468,7 +822,8 @@ function isEditingText(): boolean {
 
 function onKeyDown(evt: KeyboardEvent) {
   if (isEditingText()) return;
-  if (playerStatus.value === 'playing') return;
+  if (graphPlayerStatus.value === 'playing') return;
+  if (isListAlgo.value) return;
   if (evt.altKey) return;
 
   const key = evt.key.toLowerCase();
@@ -606,7 +961,7 @@ watch(
 watch(
   () => auth.isAuthed,
   (ok) => {
-    if (!ok && playerStatus.value !== 'playing') {
+    if (!ok && graphPlayerStatus.value !== 'playing') {
       vizState.note = '未登录：可以浏览页面，登录后才能编辑图。';
     }
     if (ok) {
@@ -740,6 +1095,10 @@ watch(
   overflow: visible;
   background: var(--panel-bg);
   backdrop-filter: blur(10px);
+}
+
+.k-input {
+  width: 120px;
 }
 :deep(.el-menu) {
   border-right: none;

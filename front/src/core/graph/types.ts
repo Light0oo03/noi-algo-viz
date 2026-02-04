@@ -24,6 +24,9 @@ export interface Graph {
   edges: GraphEdge[];
 }
 
+/** 带权邻居 */
+export type WeightedNeighbor = { to: NodeId; w: number };
+
 /** 边的唯一标识符（无向边：小端-大端） */
 export function edgeKey(u: NodeId, v: NodeId): string {
   const a = Math.min(u, v);
@@ -49,6 +52,26 @@ export function buildAdjList(graph: Graph): Map<NodeId, NodeId[]> {
   // 按 id 升序排列邻居（保证 BFS 遍历顺序一致）
   for (const [, neighbors] of adj) {
     neighbors.sort((a, b) => a - b);
+  }
+
+  return adj;
+}
+
+/** 从图构建带权邻接表 */
+export function buildWeightedAdjList(graph: Graph): Map<NodeId, WeightedNeighbor[]> {
+  const adj = new Map<NodeId, WeightedNeighbor[]>();
+
+  for (const node of graph.nodes) {
+    adj.set(node.id, []);
+  }
+
+  for (const edge of graph.edges) {
+    adj.get(edge.u)!.push({ to: edge.v, w: edge.w });
+    adj.get(edge.v)!.push({ to: edge.u, w: edge.w });
+  }
+
+  for (const [, neighbors] of adj) {
+    neighbors.sort((a, b) => a.to - b.to);
   }
 
   return adj;

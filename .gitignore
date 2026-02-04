@@ -27,3 +27,5 @@ backend/src/generated/prisma
 *.njsproj
 *.sln
 *.sw?
+
+.cursor/

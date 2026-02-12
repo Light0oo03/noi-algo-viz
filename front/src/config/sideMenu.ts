@@ -37,12 +37,22 @@ export const sideMenuSections: MenuSection[] = [
   {
     id: 'stack',
     title: '栈',
-    items: [{ id: 'stack-placeholder', label: '敬请期待', disabled: true }],
+    items: [
+      { id: 'valid-parentheses', label: '有效的括号', algoKey: 'valid-parentheses' },
+      { id: 'min-stack', label: '最小栈', algoKey: 'min-stack' },
+      { id: 'monotonic-stack', label: '单调栈（柱状图）', algoKey: 'monotonic-stack' },
+      { id: 'rpn-calculator', label: '逆波兰表达式', algoKey: 'rpn-calculator' },
+      { id: 'queue-by-stack', label: '栈实现队列', algoKey: 'queue-by-stack' },
+    ],
   },
   {
     id: 'queue',
     title: '队列',
-    items: [{ id: 'queue-placeholder', label: '敬请期待', disabled: true }],
+    items: [
+      { id: 'basic', label: '队列基本操作', algoKey: 'basic' },
+      { id: 'circular', label: '循环队列', algoKey: 'circular' },
+      { id: 'deque', label: '双端队列', algoKey: 'deque' },
+    ],
   },
   {
     id: 'tree',

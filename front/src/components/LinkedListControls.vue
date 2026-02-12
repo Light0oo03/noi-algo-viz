@@ -1,14 +1,17 @@
 <template>
   <div class="player-controls">
-    <div class="progress-wrapper" v-if="totalSteps > 0">
+    <div class="progress-wrapper">
       <el-slider
+        v-if="totalSteps > 0"
         v-model="sliderValue"
         :min="1"
         :max="totalSteps"
         :show-tooltip="true"
         :format-tooltip="formatTooltip"
       />
-      <div class="progress-text">{{ currentStep }} / {{ totalSteps }}</div>
+      <div v-else class="progress-empty">未开始</div>
+      <div v-if="totalSteps > 0" class="progress-text">{{ currentStep }} / {{ totalSteps }}</div>
+      <div v-else class="progress-text">0 / 0</div>
     </div>
 
     <div class="bar">
@@ -103,6 +106,20 @@ function onPlayPause() {
   position: relative;
   width: 100%;
   padding: 0 4px;
+  min-height: 40px;
+}
+
+.progress-empty {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .progress-text {

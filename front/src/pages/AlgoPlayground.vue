@@ -56,7 +56,7 @@
 
       <el-main class="center">
         <GraphCanvas
-          v-if="!isListAlgo"
+          v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo"
           :graph="graph"
           :node-states="vizState.nodeStates"
           :edge-states="vizState.edgeStates"
@@ -66,17 +66,21 @@
           @note="setNote"
           @disabled-action="onDisabledGraphAction"
         />
-        <LinkedListCanvas v-else :state="listVizState" />
+        <LinkedListCanvas v-else-if="isListAlgo" :state="listVizState" />
+        <StackCanvas v-else-if="isStackAlgo" :state="stackVizState" />
+        <QueueCanvas v-else-if="isQueueAlgo" :state="queueVizState" />
         <div class="floating-panel">
           <StatePanel
-            v-if="!isListAlgo"
+            v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo"
             :note="vizState.note"
             :queue="vizState.queue"
             :player-status="graphPlayerStatus"
             :node-states="vizState.nodeStates"
             :algo="selectedAlgo"
           />
-          <LinkedListStatePanel v-else :note="listVizState.note" :state="listVizState" />
+          <LinkedListStatePanel v-else-if="isListAlgo" :note="listVizState.note" :state="listVizState" />
+          <StackStatePanel v-else-if="isStackAlgo" :note="stackVizState.note" :state="stackVizState" />
+          <QueueStatePanel v-else-if="isQueueAlgo" :note="queueVizState.note" :state="queueVizState" />
         </div>
       </el-main>
 
@@ -92,7 +96,7 @@
 
     <el-footer class="footer">
       <PlayerControls
-        v-if="!isListAlgo"
+        v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo"
         :status="graphPlayerStatus"
         :current-step="currentStep"
         :total-steps="totalSteps"
@@ -107,7 +111,7 @@
         @go-to-step="goToStep"
       />
       <LinkedListControls
-        v-else
+        v-else-if="isListAlgo"
         :status="listPlayerStatus"
         :current-step="listCurrentStep"
         :total-steps="listTotalSteps"
@@ -132,6 +136,34 @@
           />
         </template>
       </LinkedListControls>
+      <LinkedListControls
+        v-else-if="isStackAlgo"
+        :status="stackPlayerStatus"
+        :current-step="stackCurrentStep"
+        :total-steps="stackTotalSteps"
+        :selected-algo="selectedAlgo"
+        @update:selected-algo="selectedAlgo = $event"
+        @play="play"
+        @pause="pause"
+        @step="step"
+        @step-back="stepBack"
+        @reset="reset"
+        @go-to-step="goToStep"
+      />
+      <LinkedListControls
+        v-else-if="isQueueAlgo"
+        :status="queuePlayerStatus"
+        :current-step="queueCurrentStep"
+        :total-steps="queueTotalSteps"
+        :selected-algo="selectedAlgo"
+        @update:selected-algo="selectedAlgo = $event"
+        @play="play"
+        @pause="pause"
+        @step="step"
+        @step-back="stepBack"
+        @reset="reset"
+        @go-to-step="goToStep"
+      />
     </el-footer>
 
     <el-dialog v-model="authDialogOpen" title="登录 / 注册" width="360px">
@@ -172,6 +204,10 @@ import StatePanel from '../components/StatePanel.vue';
 import LinkedListCanvas from '../components/LinkedListCanvas.vue';
 import LinkedListControls from '../components/LinkedListControls.vue';
 import LinkedListStatePanel from '../components/LinkedListStatePanel.vue';
+import StackCanvas from '../components/StackCanvas.vue';
+import StackStatePanel from '../components/StackStatePanel.vue';
+import QueueCanvas from '../components/QueueCanvas.vue';
+import QueueStatePanel from '../components/QueueStatePanel.vue';
 import CodeViewer from '../components/CodeViewer.vue';
 import { sideMenuSections } from '../config/sideMenu';
 
@@ -197,6 +233,29 @@ import { createInitialListVizState } from '../core/linked-list/types';
 import { buildList } from '../core/linked-list/utils';
 import { generateReverseTrace } from '../core/linked-list/reverse';
 import { generateMiddleTrace } from '../core/linked-list/middle';
+import { StackTracePlayer, type StackPlayerStatus } from '../core/stack/TracePlayer';
+import type { StackVizState } from '../core/stack/types';
+import { createInitialStackVizState } from '../core/stack/types';
+import { buildStack } from '../core/stack/utils';
+import { generateValidParenthesesTrace } from '../core/stack/valid-parentheses';
+import { VALID_PARENTHESES_CODE_JS } from '../core/stack/valid-parentheses-code';
+import { generateMinStackTrace, MIN_STACK_DEFAULT_OPS } from '../core/stack/min-stack';
+import { MIN_STACK_CODE_JS } from '../core/stack/min-stack-code';
+import { generateMonotonicStackTrace } from '../core/stack/monotonic-stack';
+import { MONOTONIC_STACK_CODE_JS } from '../core/stack/monotonic-stack-code';
+import { generateRPNCalculatorTrace } from '../core/stack/rpn-calculator';
+import { RPN_CALCULATOR_CODE_JS } from '../core/stack/rpn-calculator-code';
+import { generateQueueByStackTrace, QUEUE_BY_STACK_DEFAULT_OPS } from '../core/stack/queue-by-stack';
+import { QUEUE_BY_STACK_CODE_JS } from '../core/stack/queue-by-stack-code';
+import { QueueTracePlayer, type QueuePlayerStatus } from '../core/queue/TracePlayer';
+import type { QueueVizState } from '../core/queue/types';
+import { createInitialQueueVizState } from '../core/queue/types';
+import { generateQueueBasicTrace, QUEUE_BASIC_DEFAULT_OPS } from '../core/queue/basic';
+import { QUEUE_BASIC_CODE_JS } from '../core/queue/basic-code';
+import { generateCircularQueueTrace, CIRCULAR_QUEUE_DEFAULT_OPS } from '../core/queue/circular-queue';
+import { CIRCULAR_QUEUE_CODE_JS } from '../core/queue/circular-queue-code';
+import { generateDequeTrace, DEQUE_DEFAULT_OPS } from '../core/queue/deque';
+import { DEQUE_CODE_JS } from '../core/queue/deque-code';
 import { generateCycleTrace } from '../core/linked-list/cycle';
 import { generateMergeTrace } from '../core/linked-list/merge';
 import { generateRemoveKTrace } from '../core/linked-list/remove-k';
@@ -251,7 +310,27 @@ const isListAlgo = computed(() => (
   || selectedAlgo.value === 'remove-k'
 ));
 
-const canEditGraph = computed(() => auth.isAuthed && graphPlayerStatus.value !== 'playing' && !isListAlgo.value);
+const isStackAlgo = computed(() => (
+  selectedAlgo.value === 'valid-parentheses'
+  || selectedAlgo.value === 'min-stack'
+  || selectedAlgo.value === 'monotonic-stack'
+  || selectedAlgo.value === 'rpn-calculator'
+  || selectedAlgo.value === 'queue-by-stack'
+));
+
+const isQueueAlgo = computed(() => (
+  selectedAlgo.value === 'basic'
+  || selectedAlgo.value === 'circular'
+  || selectedAlgo.value === 'deque'
+));
+
+const canEditGraph = computed(() => (
+  auth.isAuthed
+  && graphPlayerStatus.value !== 'playing'
+  && !isListAlgo.value
+  && !isStackAlgo.value
+  && !isQueueAlgo.value
+));
 const disabledHint = computed(() => {
   if (graphPlayerStatus.value === 'playing') return '播放中：已禁用编辑';
   if (!auth.isAuthed) return '未登录：请先登录后编辑';
@@ -318,6 +397,22 @@ const currentAlgoCode = computed(() => {
       return MERGE_CODE_JS;
     case 'remove-k':
       return REMOVE_K_CODE_JS;
+    case 'valid-parentheses':
+      return VALID_PARENTHESES_CODE_JS;
+    case 'min-stack':
+      return MIN_STACK_CODE_JS;
+    case 'monotonic-stack':
+      return MONOTONIC_STACK_CODE_JS;
+    case 'rpn-calculator':
+      return RPN_CALCULATOR_CODE_JS;
+    case 'queue-by-stack':
+      return QUEUE_BY_STACK_CODE_JS;
+    case 'basic':
+      return QUEUE_BASIC_CODE_JS;
+    case 'circular':
+      return CIRCULAR_QUEUE_CODE_JS;
+    case 'deque':
+      return DEQUE_CODE_JS;
     default:
       return BFS_CODE_JS;
   }
@@ -345,6 +440,22 @@ const currentAlgoTitle = computed(() => {
       return '合并两个有序链表';
     case 'remove-k':
       return '删除倒数第 k 个节点';
+    case 'valid-parentheses':
+      return '有效的括号';
+    case 'min-stack':
+      return '最小栈';
+    case 'monotonic-stack':
+      return '单调栈（柱状图）';
+    case 'rpn-calculator':
+      return '逆波兰表达式';
+    case 'queue-by-stack':
+      return '栈实现队列';
+    case 'basic':
+      return '队列基本操作';
+    case 'circular':
+      return '循环队列';
+    case 'deque':
+      return '双端队列';
     default:
       return '算法代码';
   }
@@ -372,6 +483,22 @@ const currentAlgoName = computed(() => {
       return '合并两个有序链表';
     case 'remove-k':
       return '删除倒数第 k 个节点';
+    case 'valid-parentheses':
+      return '有效的括号';
+    case 'min-stack':
+      return '最小栈';
+    case 'monotonic-stack':
+      return '单调栈（柱状图）';
+    case 'rpn-calculator':
+      return '逆波兰表达式';
+    case 'queue-by-stack':
+      return '栈实现队列';
+    case 'basic':
+      return '队列基本操作';
+    case 'circular':
+      return '循环队列';
+    case 'deque':
+      return '双端队列';
     default:
       return '算法';
   }
@@ -399,14 +526,33 @@ const currentAlgoDesc = computed(() => {
       return '当前：链表 / 合并两个有序链表';
     case 'remove-k':
       return `当前：链表 / 删除倒数第 k 个（k=${removeK.value}）`;
+    case 'valid-parentheses':
+      return '当前：栈 / 有效的括号';
+    case 'min-stack':
+      return '当前：栈 / 最小栈';
+    case 'monotonic-stack':
+      return '当前：栈 / 单调栈（柱状图）';
+    case 'rpn-calculator':
+      return '当前：栈 / 逆波兰表达式';
+    case 'queue-by-stack':
+      return '当前：栈 / 栈实现队列';
+    case 'basic':
+      return '当前：队列 / 基本操作';
+    case 'circular':
+      return '当前：队列 / 循环队列';
+    case 'deque':
+      return '当前：队列 / 双端队列';
     default:
       return '当前：无向图 / 算法未选择';
   }
 });
 
-const currentHighlightLines = computed(() => (
-  isListAlgo.value ? listVizState.highlightLines : vizState.highlightLines
-));
+const currentHighlightLines = computed(() => {
+  if (isListAlgo.value) return listVizState.highlightLines;
+  if (isStackAlgo.value) return stackVizState.highlightLines;
+  if (isQueueAlgo.value) return queueVizState.highlightLines;
+  return vizState.highlightLines;
+});
 
 // ---------------------------
 // TracePlayer 实例（图）
@@ -487,6 +633,78 @@ const listPlayer = new ListTracePlayer(buildInitialListState(selectedAlgo.value)
 });
 
 // ---------------------------
+// 栈可视化状态与播放器
+// ---------------------------
+const stackVizState = reactive<StackVizState>(
+  createInitialStackVizState([buildStack([], { id: 'stack', label: '栈' })])
+);
+
+function syncStackVizState(state: StackVizState) {
+  stackVizState.stacks = state.stacks;
+  stackVizState.itemStates = state.itemStates;
+  stackVizState.topPointers = state.topPointers;
+  stackVizState.note = state.note;
+  stackVizState.highlightLines = state.highlightLines;
+}
+
+const stackPlayerStatus = ref<StackPlayerStatus>('idle');
+const stackCurrentStep = ref<number>(0);
+const stackTotalSteps = ref<number>(0);
+
+const stackPlayer = new StackTracePlayer(
+  createInitialStackVizState([buildStack([], { id: 'stack', label: '栈' })]),
+  {
+    interval: 800,
+    onStateChange: (state) => {
+      syncStackVizState(state);
+      stackCurrentStep.value = stackPlayer.stepIndex + 1;
+    },
+    onStatusChange: (status) => {
+      stackPlayerStatus.value = status;
+      stackTotalSteps.value = stackPlayer.totalSteps;
+      stackCurrentStep.value = stackPlayer.stepIndex + 1;
+    },
+  }
+);
+
+// ---------------------------
+// 队列可视化状态与播放器
+// ---------------------------
+const queueVizState = reactive<QueueVizState>(
+  createInitialQueueVizState([{ id: 'queue', label: '队列', items: [] }])
+);
+
+function syncQueueVizState(state: QueueVizState) {
+  queueVizState.queues = state.queues;
+  queueVizState.itemStates = state.itemStates;
+  queueVizState.frontPointers = state.frontPointers;
+  queueVizState.rearPointers = state.rearPointers;
+  queueVizState.note = state.note;
+  queueVizState.highlightLines = state.highlightLines;
+}
+
+const queuePlayerStatus = ref<QueuePlayerStatus>('idle');
+const queueCurrentStep = ref<number>(0);
+const queueTotalSteps = ref<number>(0);
+
+const queuePlayer = new QueueTracePlayer(
+  createInitialQueueVizState([{ id: 'queue', label: '队列', items: [] }]),
+  {
+    interval: 800,
+    onStateChange: (state) => {
+      syncQueueVizState(state);
+      queueCurrentStep.value = queuePlayer.stepIndex + 1;
+    },
+    onStatusChange: (status) => {
+      queuePlayerStatus.value = status;
+      queueTotalSteps.value = queuePlayer.totalSteps;
+      queueCurrentStep.value = queuePlayer.stepIndex + 1;
+    },
+  }
+);
+
+
+// ---------------------------
 // 图编辑回调
 // ---------------------------
 let saveTimer: number | null = null;
@@ -542,7 +760,7 @@ function generateTrace() {
   // 根据选择的算法生成 trace
   if (selectedAlgo.value === 'bfs') {
     const startNode = 0;
-    
+
     // 检查起点是否存在
     if (!graph.value.nodes.some((n) => n.id === startNode)) {
       vizState.note = `错误：起点节点 ${startNode} 不存在！请先添加节点 0。`;
@@ -550,10 +768,10 @@ function generateTrace() {
     }
 
     const trace = generateBfsTrace(graph.value, startNode);
-    
+
     // 更新播放器初始状态
     graphPlayer.updateInitialState(getInitialState(graph.value));
-    
+
     // 加载 trace
     graphPlayer.load(trace);
     return true;
@@ -653,7 +871,65 @@ function generateTrace() {
       }
     }
   }
-  
+
+  if (isStackAlgo.value) {
+    const initialState = createInitialStackVizState([buildStack([], { id: 'stack', label: '栈' })]);
+    stackPlayer.updateInitialState(initialState);
+
+    switch (selectedAlgo.value) {
+      case 'valid-parentheses': {
+        const trace = generateValidParenthesesTrace('({[]})');
+        stackPlayer.load(trace);
+        return true;
+      }
+      case 'min-stack': {
+        const trace = generateMinStackTrace(MIN_STACK_DEFAULT_OPS);
+        stackPlayer.load(trace);
+        return true;
+      }
+      case 'monotonic-stack': {
+        const heights = [2, 1, 5, 6, 2, 3];
+        const trace = generateMonotonicStackTrace(heights);
+        stackPlayer.load(trace);
+        return true;
+      }
+      case 'rpn-calculator': {
+        const tokens = ['2', '1', '+', '3', '*'];
+        const trace = generateRPNCalculatorTrace(tokens);
+        stackPlayer.load(trace);
+        return true;
+      }
+      case 'queue-by-stack': {
+        const trace = generateQueueByStackTrace(QUEUE_BY_STACK_DEFAULT_OPS);
+        stackPlayer.load(trace);
+        return true;
+      }
+    }
+  }
+
+  if (isQueueAlgo.value) {
+    const initialQueueState = createInitialQueueVizState([{ id: 'queue', label: '队列', items: [] }]);
+    queuePlayer.updateInitialState(initialQueueState);
+
+    switch (selectedAlgo.value) {
+      case 'basic': {
+        const trace = generateQueueBasicTrace(QUEUE_BASIC_DEFAULT_OPS);
+        queuePlayer.load(trace);
+        return true;
+      }
+      case 'circular': {
+        const trace = generateCircularQueueTrace(5, CIRCULAR_QUEUE_DEFAULT_OPS);
+        queuePlayer.load(trace);
+        return true;
+      }
+      case 'deque': {
+        const trace = generateDequeTrace(DEQUE_DEFAULT_OPS);
+        queuePlayer.load(trace);
+        return true;
+      }
+    }
+  }
+
   // 后续可以在这里添加其他算法
   return false;
 }
@@ -662,17 +938,27 @@ function play() {
   // 如果是 idle 状态，需要先生成 trace
   if (isListAlgo.value) {
     if (listPlayerStatus.value === 'idle') {
-      if (!generateTrace()) {
-        return;
-      }
+      if (!generateTrace()) return;
     }
     listPlayer.play();
     return;
   }
-  if (graphPlayerStatus.value === 'idle') {
-    if (!generateTrace()) {
-      return;
+  if (isStackAlgo.value) {
+    if (stackPlayerStatus.value === 'idle') {
+      if (!generateTrace()) return;
     }
+    stackPlayer.play();
+    return;
+  }
+  if (isQueueAlgo.value) {
+    if (queuePlayerStatus.value === 'idle') {
+      if (!generateTrace()) return;
+    }
+    queuePlayer.play();
+    return;
+  }
+  if (graphPlayerStatus.value === 'idle') {
+    if (!generateTrace()) return;
   }
   graphPlayer.play();
 }
@@ -682,6 +968,14 @@ function pause() {
     listPlayer.pause();
     return;
   }
+  if (isStackAlgo.value) {
+    stackPlayer.pause();
+    return;
+  }
+  if (isQueueAlgo.value) {
+    queuePlayer.pause();
+    return;
+  }
   graphPlayer.pause();
 }
 
@@ -689,17 +983,27 @@ function step() {
   // 如果是 idle 状态，需要先生成 trace
   if (isListAlgo.value) {
     if (listPlayerStatus.value === 'idle') {
-      if (!generateTrace()) {
-        return;
-      }
+      if (!generateTrace()) return;
     }
     listPlayer.stepOnce();
     return;
   }
-  if (graphPlayerStatus.value === 'idle') {
-    if (!generateTrace()) {
-      return;
+  if (isStackAlgo.value) {
+    if (stackPlayerStatus.value === 'idle') {
+      if (!generateTrace()) return;
     }
+    stackPlayer.stepOnce();
+    return;
+  }
+  if (isQueueAlgo.value) {
+    if (queuePlayerStatus.value === 'idle') {
+      if (!generateTrace()) return;
+    }
+    queuePlayer.stepOnce();
+    return;
+  }
+  if (graphPlayerStatus.value === 'idle') {
+    if (!generateTrace()) return;
   }
   graphPlayer.stepOnce();
 }
@@ -707,6 +1011,14 @@ function step() {
 function stepBack() {
   if (isListAlgo.value) {
     listPlayer.stepBack();
+    return;
+  }
+  if (isStackAlgo.value) {
+    stackPlayer.stepBack();
+    return;
+  }
+  if (isQueueAlgo.value) {
+    queuePlayer.stepBack();
     return;
   }
   graphPlayer.stepBack();
@@ -717,6 +1029,14 @@ function goToStep(index: number) {
     listPlayer.goToStep(index);
     return;
   }
+  if (isStackAlgo.value) {
+    stackPlayer.goToStep(index);
+    return;
+  }
+  if (isQueueAlgo.value) {
+    queuePlayer.goToStep(index);
+    return;
+  }
   graphPlayer.goToStep(index);
 }
 
@@ -724,6 +1044,16 @@ function reset() {
   if (isListAlgo.value) {
     listPlayer.reset();
     listVizState.note = '已重置。选择算法后点击播放或单步。';
+    return;
+  }
+  if (isStackAlgo.value) {
+    stackPlayer.reset();
+    stackVizState.note = '已重置。选择算法后点击播放或单步。';
+    return;
+  }
+  if (isQueueAlgo.value) {
+    queuePlayer.reset();
+    queueVizState.note = '已重置。选择算法后点击播放或单步。';
     return;
   }
   graphPlayer.reset();
@@ -786,6 +1116,32 @@ watch(
       listCurrentStep.value = 0;
       listTotalSteps.value = 0;
       listVizState.note = `已切换到 ${currentAlgoName.value}，可点击播放或单步开始。`;
+      return;
+    }
+    if (isStackAlgo.value) {
+      if (stackPlayerStatus.value === 'playing') {
+        stackPlayer.pause();
+      }
+      const newState = createInitialStackVizState([buildStack([], { id: 'stack', label: '栈' })]);
+      stackPlayer.updateInitialState(newState);
+      stackPlayer.clear();
+      syncStackVizState(newState);
+      stackCurrentStep.value = 0;
+      stackTotalSteps.value = 0;
+      stackVizState.note = `已切换到 ${currentAlgoName.value}，可点击播放或单步开始。`;
+      return;
+    }
+    if (isQueueAlgo.value) {
+      if (queuePlayerStatus.value === 'playing') {
+        queuePlayer.pause();
+      }
+      const newState = createInitialQueueVizState([{ id: 'queue', label: '队列', items: [] }]);
+      queuePlayer.updateInitialState(newState);
+      queuePlayer.clear();
+      syncQueueVizState(newState);
+      queueCurrentStep.value = 0;
+      queueTotalSteps.value = 0;
+      queueVizState.note = `已切换到 ${currentAlgoName.value}，可点击播放或单步开始。`;
       return;
     }
     if (graphPlayerStatus.value === 'playing') {

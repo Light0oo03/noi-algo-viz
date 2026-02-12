@@ -30,3 +30,4 @@ backend/src/generated/prisma
 
 .cursor/
 .trae/
+.claude/

@@ -208,6 +208,9 @@ import StackCanvas from '../components/StackCanvas.vue';
 import StackStatePanel from '../components/StackStatePanel.vue';
 import QueueCanvas from '../components/QueueCanvas.vue';
 import QueueStatePanel from '../components/QueueStatePanel.vue';
+import TreeCanvas from '../components/TreeCanvas.vue';
+import TreeStatePanel from '../components/TreeStatePanel.vue';
+import TreeControls from '../components/TreeControls.vue';
 import CodeViewer from '../components/CodeViewer.vue';
 import { sideMenuSections } from '../config/sideMenu';
 
@@ -256,6 +259,14 @@ import { generateCircularQueueTrace, CIRCULAR_QUEUE_DEFAULT_OPS } from '../core/
 import { CIRCULAR_QUEUE_CODE_JS } from '../core/queue/circular-queue-code';
 import { generateDequeTrace, DEQUE_DEFAULT_OPS } from '../core/queue/deque';
 import { DEQUE_CODE_JS } from '../core/queue/deque-code';
+import { TreeTracePlayer, type TreePlayerStatus } from '../core/tree/TracePlayer';
+import type { TreeVizState } from '../core/tree/types';
+import { createInitialTreeVizState } from '../core/tree/types';
+import { buildBinaryTree } from '../core/tree/utils';
+import { generateTraversalTrace } from '../core/tree/traversal';
+import { TRAVERSAL_CODE_JS } from '../core/tree/traversal-code';
+import { generateLevelOrderTrace } from '../core/tree/level-order';
+import { LEVEL_ORDER_CODE_JS } from '../core/tree/level-order-code';
 import { generateCycleTrace } from '../core/linked-list/cycle';
 import { generateMergeTrace } from '../core/linked-list/merge';
 import { generateRemoveKTrace } from '../core/linked-list/remove-k';
@@ -324,12 +335,20 @@ const isQueueAlgo = computed(() => (
   || selectedAlgo.value === 'deque'
 ));
 
+const isTreeAlgo = computed(() => (
+  selectedAlgo.value === 'preorder'
+  || selectedAlgo.value === 'inorder'
+  || selectedAlgo.value === 'postorder'
+  || selectedAlgo.value === 'level-order'
+));
+
 const canEditGraph = computed(() => (
   auth.isAuthed
   && graphPlayerStatus.value !== 'playing'
   && !isListAlgo.value
   && !isStackAlgo.value
   && !isQueueAlgo.value
+  && !isTreeAlgo.value
 ));
 const disabledHint = computed(() => {
   if (graphPlayerStatus.value === 'playing') return '播放中：已禁用编辑';

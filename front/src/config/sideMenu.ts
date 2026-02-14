@@ -57,7 +57,12 @@ export const sideMenuSections: MenuSection[] = [
   {
     id: 'tree',
     title: '树',
-    items: [{ id: 'tree-placeholder', label: '敬请期待', disabled: true }],
+    items: [
+      { id: 'preorder', label: '前序遍历', algoKey: 'preorder' },
+      { id: 'inorder', label: '中序遍历', algoKey: 'inorder' },
+      { id: 'postorder', label: '后序遍历', algoKey: 'postorder' },
+      { id: 'level-order', label: '层序遍历', algoKey: 'level-order' },
+    ],
   },
   {
     id: 'search',

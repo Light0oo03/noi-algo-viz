@@ -133,6 +133,7 @@ const contextMenu = reactive({
   edgeU: null as NodeId | null,
   edgeV: null as NodeId | null,
 });
+let contextMenuOpenedAt = 0;
 
 function hideContextMenu() {
   contextMenu.visible = false;
@@ -206,6 +207,8 @@ function onClickEdge(edge: GraphEdge, evt: any) {
 }
 
 function onClickStage(evt: any) {
+  if (Date.now() - contextMenuOpenedAt < 200) return;
+  if (evt?.evt?.button === 2) return;
   const target = evt.target;
   const stage = stageRef.value?.getStage?.() ?? stageRef.value;
   
@@ -217,6 +220,7 @@ function onClickStage(evt: any) {
 }
 
 function onClickOutside() {
+  if (Date.now() - contextMenuOpenedAt < 200) return;
   clearSelection();
   draftStart.value = null;
 }
@@ -251,6 +255,7 @@ function onRightClickNode(id: NodeId, evt: any) {
   contextMenu.type = 'node';
   contextMenu.targetId = id;
   contextMenu.visible = true;
+  contextMenuOpenedAt = Date.now();
 }
 
 function onRightClickEdge(edge: GraphEdge, evt: any) {
@@ -281,6 +286,7 @@ function onRightClickEdge(edge: GraphEdge, evt: any) {
   contextMenu.edgeU = edge.u;
   contextMenu.edgeV = edge.v;
   contextMenu.visible = true;
+  contextMenuOpenedAt = Date.now();
 }
 
 function onStageContextMenu(evt: any) {

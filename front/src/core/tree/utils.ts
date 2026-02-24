@@ -99,10 +99,11 @@ export function createInitialTreeVizState(trees: TreeView[]): TreeVizState {
   const edgeStates: Record<string, Record<string, 'default'>> = {};
 
   trees.forEach((tree) => {
-    nodeStates[tree.id] = {};
+    const treeNodeStates: Record<number, 'default'> = {};
     tree.nodes.forEach((node) => {
-      nodeStates[tree.id][node.id] = 'default';
+      treeNodeStates[node.id] = 'default';
     });
+    nodeStates[tree.id] = treeNodeStates;
 
     edgeStates[tree.id] = {};
   });

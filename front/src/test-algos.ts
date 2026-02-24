@@ -27,10 +27,11 @@ const results: TestResult[] = [];
 function testAlgo(name: string, fn: () => any) {
   try {
     const trace = fn();
-    if (!trace || !Array.isArray(trace) || trace.length === 0) {
+    const steps = trace?.steps;
+    if (!Array.isArray(steps) || steps.length === 0) {
       results.push({ name, passed: false, error: 'Trace is empty or invalid' });
     } else {
-      results.push({ name, passed: true, stepCount: trace.length });
+      results.push({ name, passed: true, stepCount: steps.length });
     }
   } catch (error: any) {
     results.push({ name, passed: false, error: error?.message || 'Unknown error' });
@@ -69,5 +70,5 @@ results.forEach((result) => {
 console.log(`\n总计: ${passedCount} 通过, ${failedCount} 失败`);
 
 if (failedCount > 0) {
-  process.exit(1);
+  throw new Error(`Trace tests failed: ${failedCount}`);
 }

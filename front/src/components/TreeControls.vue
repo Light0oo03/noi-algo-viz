@@ -28,6 +28,7 @@
       <el-button size="small" type="primary" @click="onPlayPause">{{ status === 'playing' ? '暂停' : '播放' }}</el-button>
       <el-button size="small" :disabled="status === 'ended'" @click="$emit('step')">下一步</el-button>
       <el-button size="small" @click="$emit('reset')">重置动画</el-button>
+      <el-button size="small" type="warning" @click="$emit('resetTree')">恢复默认图</el-button>
       <div class="status">状态：{{ statusLabel }}</div>
     </div>
   </div>
@@ -49,6 +50,7 @@ const emit = defineEmits<{
   (e: 'step'): void;
   (e: 'stepBack'): void;
   (e: 'reset'): void;
+  (e: 'resetTree'): void;
   (e: 'goToStep', step: number): void;
   (e: 'update:selectedAlgo', algo: string): void;
 }>();

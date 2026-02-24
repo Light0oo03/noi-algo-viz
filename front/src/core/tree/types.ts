@@ -3,6 +3,8 @@ export type TreeNode = {
   value: number;
   left: number | null;
   right: number | null;
+  x?: number;
+  y?: number;
 };
 
 export type TreeView = {

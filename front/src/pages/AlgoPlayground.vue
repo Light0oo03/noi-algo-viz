@@ -56,7 +56,7 @@
 
       <el-main class="center">
         <GraphCanvas
-          v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo"
+          v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo && !isTreeAlgo"
           :graph="graph"
           :node-states="vizState.nodeStates"
           :edge-states="vizState.edgeStates"
@@ -69,9 +69,18 @@
         <LinkedListCanvas v-else-if="isListAlgo" :state="listVizState" />
         <StackCanvas v-else-if="isStackAlgo" :state="stackVizState" />
         <QueueCanvas v-else-if="isQueueAlgo" :state="queueVizState" />
+        <TreeCanvas
+          v-else-if="isTreeAlgo"
+          :state="treeVizState"
+          :disabled="treePlayerStatus === 'playing'"
+          disabled-hint="播放中：已禁用树编辑"
+          @update:tree="onUpdateTree"
+          @note="setTreeNote"
+          @disabled-action="onDisabledTreeAction"
+        />
         <div class="floating-panel">
           <StatePanel
-            v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo"
+            v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo && !isTreeAlgo"
             :note="vizState.note"
             :queue="vizState.queue"
             :player-status="graphPlayerStatus"
@@ -81,6 +90,7 @@
           <LinkedListStatePanel v-else-if="isListAlgo" :note="listVizState.note" :state="listVizState" />
           <StackStatePanel v-else-if="isStackAlgo" :note="stackVizState.note" :state="stackVizState" />
           <QueueStatePanel v-else-if="isQueueAlgo" :note="queueVizState.note" :state="queueVizState" />
+          <TreeStatePanel v-else-if="isTreeAlgo" :note="treeVizState.note" :state="treeVizState" />
         </div>
       </el-main>
 
@@ -96,7 +106,7 @@
 
     <el-footer class="footer">
       <PlayerControls
-        v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo"
+        v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo && !isTreeAlgo"
         :status="graphPlayerStatus"
         :current-step="currentStep"
         :total-steps="totalSteps"
@@ -164,6 +174,31 @@
         @reset="reset"
         @go-to-step="goToStep"
       />
+      <TreeControls
+        v-else-if="isTreeAlgo"
+        :status="treePlayerStatus"
+        :current-step="treeCurrentStep"
+        :total-steps="treeTotalSteps"
+        :selected-algo="selectedAlgo"
+        @update:selected-algo="selectedAlgo = $event"
+        @play="play"
+        @pause="pause"
+        @step="step"
+        @step-back="stepBack"
+        @reset="reset"
+        @reset-tree="resetTreeToDefault"
+        @go-to-step="goToStep"
+      >
+        <template #extra>
+          <el-input
+            v-model="treeInput"
+            size="small"
+            class="tree-input"
+            placeholder="层序数组，如 1,2,3,null,4"
+            clearable
+          />
+        </template>
+      </TreeControls>
     </el-footer>
 
     <el-dialog v-model="authDialogOpen" title="登录 / 注册" width="360px">
@@ -260,9 +295,8 @@ import { CIRCULAR_QUEUE_CODE_JS } from '../core/queue/circular-queue-code';
 import { generateDequeTrace, DEQUE_DEFAULT_OPS } from '../core/queue/deque';
 import { DEQUE_CODE_JS } from '../core/queue/deque-code';
 import { TreeTracePlayer, type TreePlayerStatus } from '../core/tree/TracePlayer';
-import type { TreeVizState } from '../core/tree/types';
-import { createInitialTreeVizState } from '../core/tree/types';
-import { buildBinaryTree } from '../core/tree/utils';
+import type { TreeView, TreeVizState } from '../core/tree/types';
+import { createInitialTreeVizState, buildBinaryTree } from '../core/tree/utils';
 import { generateTraversalTrace } from '../core/tree/traversal';
 import { TRAVERSAL_CODE_JS } from '../core/tree/traversal-code';
 import { generateLevelOrderTrace } from '../core/tree/level-order';
@@ -281,6 +315,75 @@ import { useGraphStore } from '../stores/graphStore';
 import type { UpdateGraphOptions } from '../stores/graphStore';
 import { useAuthStore } from '../stores/authStore';
 import { apiUrl } from '../config/api';
+
+const ALGO_STORAGE_KEY = 'noi-algo-viz:selected-algo';
+const TREE_STORAGE_KEY_PREFIX = 'noi-algo-viz:tree';
+
+function getAllEnabledAlgoKeys(): string[] {
+  return sideMenuSections
+    .flatMap((section) => section.items)
+    .filter((item) => !item.disabled)
+    .map((item) => item.algoKey || item.id);
+}
+
+function getInitialAlgo(): string {
+  const fallback = 'bfs';
+  const enabledKeys = getAllEnabledAlgoKeys();
+  if (typeof window === 'undefined') return fallback;
+  const stored = window.localStorage.getItem(ALGO_STORAGE_KEY);
+  if (!stored) return fallback;
+  return enabledKeys.includes(stored) ? stored : fallback;
+}
+
+function getCurrentTreeStorageKey(): string {
+  const userId = auth.user?.id;
+  return userId ? `${TREE_STORAGE_KEY_PREFIX}:${userId}` : `${TREE_STORAGE_KEY_PREFIX}:guest`;
+}
+
+function isValidTreeView(value: unknown): value is TreeView {
+  if (!value || typeof value !== 'object') return false;
+  const tree = value as any;
+  if (typeof tree.id !== 'string' || typeof tree.label !== 'string') return false;
+  if (!Array.isArray(tree.nodes)) return false;
+  const nodesOk = tree.nodes.every((node: any) =>
+    node
+    && typeof node === 'object'
+    && Number.isFinite(node.id)
+    && Number.isFinite(node.value)
+    && (node.left === null || Number.isFinite(node.left))
+    && (node.right === null || Number.isFinite(node.right))
+    && (node.x === undefined || Number.isFinite(node.x))
+    && (node.y === undefined || Number.isFinite(node.y))
+  );
+  if (!nodesOk) return false;
+  return tree.root === null || Number.isFinite(tree.root);
+}
+
+function saveTreeToLocal(nextTree: TreeView) {
+  if (typeof window === 'undefined') return;
+  const key = getCurrentTreeStorageKey();
+  window.localStorage.setItem(key, JSON.stringify(nextTree));
+}
+
+function loadTreeFromLocal(): TreeView | null {
+  if (typeof window === 'undefined') return null;
+  const key = getCurrentTreeStorageKey();
+  const raw = window.localStorage.getItem(key);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return isValidTreeView(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function restoreTreeFromLocal(note: string): boolean {
+  const localTree = loadTreeFromLocal();
+  if (!localTree) return false;
+  resetTreePlayer(localTree, note);
+  return true;
+}
 
 // ---------------------------
 // 图数据（使用 Pinia 持久化）
@@ -385,11 +488,20 @@ function syncVizState(state: VizState) {
 const graphPlayerStatus = ref<PlayerStatus>('idle');
 const currentStep = ref<number>(0);
 const totalSteps = ref<number>(0);
-const selectedAlgo = ref<string>('bfs');
+const selectedAlgo = ref<string>(getInitialAlgo());
 const sideCollapsed = ref<boolean>(false);
-const defaultOpeneds = ['graph'];
+const defaultOpeneds = ref<string[]>([]);
 
 const menuSections = ref(sideMenuSections);
+
+function getSectionIdByAlgo(algo: string): string {
+  const section = menuSections.value.find((group) =>
+    group.items.some((item) => (item.algoKey || item.id) === algo && !item.disabled)
+  );
+  return section?.id ?? 'graph';
+}
+
+defaultOpeneds.value = [getSectionIdByAlgo(selectedAlgo.value)];
 
 // ---------------------------
 // 算法代码展示
@@ -432,6 +544,14 @@ const currentAlgoCode = computed(() => {
       return CIRCULAR_QUEUE_CODE_JS;
     case 'deque':
       return DEQUE_CODE_JS;
+    case 'preorder':
+      return TRAVERSAL_CODE_JS.preorder;
+    case 'inorder':
+      return TRAVERSAL_CODE_JS.inorder;
+    case 'postorder':
+      return TRAVERSAL_CODE_JS.postorder;
+    case 'level-order':
+      return LEVEL_ORDER_CODE_JS;
     default:
       return BFS_CODE_JS;
   }
@@ -475,6 +595,14 @@ const currentAlgoTitle = computed(() => {
       return '循环队列';
     case 'deque':
       return '双端队列';
+    case 'preorder':
+      return '二叉树前序遍历';
+    case 'inorder':
+      return '二叉树中序遍历';
+    case 'postorder':
+      return '二叉树后序遍历';
+    case 'level-order':
+      return '二叉树层序遍历';
     default:
       return '算法代码';
   }
@@ -518,6 +646,14 @@ const currentAlgoName = computed(() => {
       return '循环队列';
     case 'deque':
       return '双端队列';
+    case 'preorder':
+      return '前序遍历';
+    case 'inorder':
+      return '中序遍历';
+    case 'postorder':
+      return '后序遍历';
+    case 'level-order':
+      return '层序遍历';
     default:
       return '算法';
   }
@@ -561,6 +697,14 @@ const currentAlgoDesc = computed(() => {
       return '当前：队列 / 循环队列';
     case 'deque':
       return '当前：队列 / 双端队列';
+    case 'preorder':
+      return '当前：树 / 前序遍历（根-左-右）';
+    case 'inorder':
+      return '当前：树 / 中序遍历（左-根-右）';
+    case 'postorder':
+      return '当前：树 / 后序遍历（左-右-根）';
+    case 'level-order':
+      return '当前：树 / 层序遍历（BFS）';
     default:
       return '当前：无向图 / 算法未选择';
   }
@@ -570,6 +714,7 @@ const currentHighlightLines = computed(() => {
   if (isListAlgo.value) return listVizState.highlightLines;
   if (isStackAlgo.value) return stackVizState.highlightLines;
   if (isQueueAlgo.value) return queueVizState.highlightLines;
+  if (isTreeAlgo.value) return treeVizState.highlightLines;
   return vizState.highlightLines;
 });
 
@@ -722,11 +867,93 @@ const queuePlayer = new QueueTracePlayer(
   }
 );
 
+// ---------------------------
+// 树可视化状态与播放器
+// ---------------------------
+const treeInput = ref<string>('1,2,3,4,5,6,7');
+
+function parseTreeInput(input: string): (number | null)[] | null {
+  const normalized = input.trim();
+  if (!normalized) return null;
+  const parts = normalized.split(',').map((part) => part.trim());
+  if (parts.length === 0) return null;
+  const values: (number | null)[] = [];
+  for (const token of parts) {
+    if (!token) return null;
+    if (token.toLowerCase() === 'null') {
+      values.push(null);
+      continue;
+    }
+    const value = Number(token);
+    if (!Number.isInteger(value)) return null;
+    values.push(value);
+  }
+  return values;
+}
+
+function cloneTree(tree: TreeView): TreeView {
+  return {
+    ...tree,
+    nodes: tree.nodes.map((node) => ({ ...node })),
+  };
+}
+
+function buildInitialTreeState(tree: TreeView): TreeVizState {
+  const state = createInitialTreeVizState([tree]);
+  state.note = '提示：输入层序数组后点击播放或单步。';
+  return state;
+}
+
+const initialTreeValues = parseTreeInput(treeInput.value) ?? [1, 2, 3, 4, 5, 6, 7];
+const treeModel = ref<TreeView>(buildBinaryTree(initialTreeValues, { id: 'tree', label: '二叉树' }));
+
+const treeVizState = reactive<TreeVizState>(buildInitialTreeState(treeModel.value));
+
+function syncTreeVizState(state: TreeVizState) {
+  treeVizState.trees = state.trees;
+  treeVizState.nodeStates = state.nodeStates;
+  treeVizState.edgeStates = state.edgeStates;
+  treeVizState.pointers = state.pointers;
+  treeVizState.queue = state.queue;
+  treeVizState.stack = state.stack;
+  treeVizState.note = state.note;
+  treeVizState.highlightLines = state.highlightLines;
+}
+
+const treePlayerStatus = ref<TreePlayerStatus>('idle');
+const treeCurrentStep = ref<number>(0);
+const treeTotalSteps = ref<number>(0);
+
+const treePlayer = new TreeTracePlayer(buildInitialTreeState(treeModel.value), {
+  interval: 800,
+  onStateChange: (state) => {
+    syncTreeVizState(state);
+    treeCurrentStep.value = treePlayer.stepIndex + 1;
+  },
+  onStatusChange: (status) => {
+    treePlayerStatus.value = status;
+    treeTotalSteps.value = treePlayer.totalSteps;
+    treeCurrentStep.value = treePlayer.stepIndex + 1;
+  },
+});
+
+function resetTreePlayer(nextTree: TreeView, note: string) {
+  treeModel.value = cloneTree(nextTree);
+  const newState = buildInitialTreeState(treeModel.value);
+  treePlayer.updateInitialState(newState);
+  treePlayer.clear();
+  syncTreeVizState(newState);
+  treeCurrentStep.value = 0;
+  treeTotalSteps.value = 0;
+  treeVizState.note = note;
+}
+
 
 // ---------------------------
 // 图编辑回调
 // ---------------------------
 let saveTimer: number | null = null;
+let treeSaveTimer: number | null = null;
 
 async function saveGraphDebounced(next: Graph) {
   if (!auth.token) return;
@@ -751,6 +978,56 @@ async function saveGraphDebounced(next: Graph) {
   }, 300);
 }
 
+async function saveTreeDebounced(nextTree: TreeView) {
+  saveTreeToLocal(nextTree);
+  if (!auth.token) return;
+  if (treeSaveTimer != null) {
+    window.clearTimeout(treeSaveTimer);
+  }
+  treeSaveTimer = window.setTimeout(async () => {
+    treeSaveTimer = null;
+    const res = await fetch(apiUrl('/tree'), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${auth.token}`,
+      },
+      body: JSON.stringify({ tree: nextTree }),
+    });
+    if (res.status === 401) {
+      auth.logout();
+      treeVizState.note = '登录已失效，请重新登录后编辑树。';
+      return;
+    }
+    if (!res.ok) {
+      treeVizState.note = '树已保存到本地，云端保存失败，请稍后重试。';
+    }
+  }, 300);
+}
+
+async function saveTreeImmediately(nextTree: TreeView): Promise<boolean> {
+  saveTreeToLocal(nextTree);
+  if (!auth.token) return true;
+  const res = await fetch(apiUrl('/tree'), {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${auth.token}`,
+    },
+    body: JSON.stringify({ tree: nextTree }),
+  });
+  if (res.status === 401) {
+    auth.logout();
+    treeVizState.note = '登录已失效，请重新登录后编辑树。';
+    return false;
+  }
+  if (!res.ok) {
+    treeVizState.note = '树已保存到本地，云端保存失败，请稍后重试。';
+    return false;
+  }
+  return true;
+}
+
 function onUpdateGraph(next: Graph, options?: UpdateGraphOptions) {
   if (!auth.isAuthed) {
     loginModalOpen.value = true;
@@ -770,6 +1047,19 @@ function onDisabledGraphAction() {
 
 function setNote(text: string) {
   vizState.note = text;
+}
+
+function onUpdateTree(nextTree: TreeView) {
+  resetTreePlayer(nextTree, '已更新树结构，可点击播放或单步开始。');
+  void saveTreeDebounced(nextTree);
+}
+
+function setTreeNote(text: string) {
+  treeVizState.note = text;
+}
+
+function onDisabledTreeAction() {
+  treeVizState.note = '播放中：已禁用树编辑';
 }
 
 // ---------------------------
@@ -949,6 +1239,22 @@ function generateTrace() {
     }
   }
 
+  if (isTreeAlgo.value) {
+    const tree = cloneTree(treeModel.value);
+    const initialTreeState = createInitialTreeVizState([tree]);
+    initialTreeState.note = '提示：选择算法后点击播放或单步。';
+    treePlayer.updateInitialState(initialTreeState);
+
+    if (selectedAlgo.value === 'level-order') {
+      treePlayer.load(generateLevelOrderTrace(tree));
+      return true;
+    }
+    if (selectedAlgo.value === 'preorder' || selectedAlgo.value === 'inorder' || selectedAlgo.value === 'postorder') {
+      treePlayer.load(generateTraversalTrace(tree, selectedAlgo.value));
+      return true;
+    }
+  }
+
   // 后续可以在这里添加其他算法
   return false;
 }
@@ -976,6 +1282,13 @@ function play() {
     queuePlayer.play();
     return;
   }
+  if (isTreeAlgo.value) {
+    if (treePlayerStatus.value === 'idle') {
+      if (!generateTrace()) return;
+    }
+    treePlayer.play();
+    return;
+  }
   if (graphPlayerStatus.value === 'idle') {
     if (!generateTrace()) return;
   }
@@ -993,6 +1306,10 @@ function pause() {
   }
   if (isQueueAlgo.value) {
     queuePlayer.pause();
+    return;
+  }
+  if (isTreeAlgo.value) {
+    treePlayer.pause();
     return;
   }
   graphPlayer.pause();
@@ -1021,6 +1338,13 @@ function step() {
     queuePlayer.stepOnce();
     return;
   }
+  if (isTreeAlgo.value) {
+    if (treePlayerStatus.value === 'idle') {
+      if (!generateTrace()) return;
+    }
+    treePlayer.stepOnce();
+    return;
+  }
   if (graphPlayerStatus.value === 'idle') {
     if (!generateTrace()) return;
   }
@@ -1040,6 +1364,10 @@ function stepBack() {
     queuePlayer.stepBack();
     return;
   }
+  if (isTreeAlgo.value) {
+    treePlayer.stepBack();
+    return;
+  }
   graphPlayer.stepBack();
 }
 
@@ -1054,6 +1382,10 @@ function goToStep(index: number) {
   }
   if (isQueueAlgo.value) {
     queuePlayer.goToStep(index);
+    return;
+  }
+  if (isTreeAlgo.value) {
+    treePlayer.goToStep(index);
     return;
   }
   graphPlayer.goToStep(index);
@@ -1075,6 +1407,11 @@ function reset() {
     queueVizState.note = '已重置。选择算法后点击播放或单步。';
     return;
   }
+  if (isTreeAlgo.value) {
+    treePlayer.reset();
+    treeVizState.note = '已重置。输入层序数组后可点击播放或单步。';
+    return;
+  }
   graphPlayer.reset();
   // 重置后恢复提示文本
   vizState.note = '已重置。双击空白添加节点；点击两个节点创建边。';
@@ -1084,6 +1421,15 @@ function resetGraphToDefault() {
   // 恢复默认图
   vizState.note = '已恢复默认图。双击空白添加节点；点击两个节点创建边。';
   graphStore.resetGraph();
+}
+
+function resetTreeToDefault() {
+  const defaultInput = '1,2,3,4,5,6,7';
+  treeInput.value = defaultInput;
+  const values = parseTreeInput(defaultInput) ?? [1, 2, 3, 4, 5, 6, 7];
+  const nextTree = buildBinaryTree(values, { id: 'tree', label: '二叉树' });
+  resetTreePlayer(nextTree, '已恢复默认树，可点击播放或单步开始。');
+  void saveTreeDebounced(nextTree);
 }
 
 function graphTopologySignature(g: Graph): string {
@@ -1124,6 +1470,11 @@ watch(
 watch(
   selectedAlgo,
   () => {
+    defaultOpeneds.value = [getSectionIdByAlgo(selectedAlgo.value)];
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(ALGO_STORAGE_KEY, selectedAlgo.value);
+    }
+
     if (isListAlgo.value) {
       if (listPlayerStatus.value === 'playing') {
         listPlayer.pause();
@@ -1163,6 +1514,19 @@ watch(
       queueVizState.note = `已切换到 ${currentAlgoName.value}，可点击播放或单步开始。`;
       return;
     }
+    if (isTreeAlgo.value) {
+      if (treePlayerStatus.value === 'playing') {
+        treePlayer.pause();
+      }
+      const newState = buildInitialTreeState(treeModel.value);
+      treePlayer.updateInitialState(newState);
+      treePlayer.clear();
+      syncTreeVizState(newState);
+      treeCurrentStep.value = 0;
+      treeTotalSteps.value = 0;
+      treeVizState.note = `已切换到 ${currentAlgoName.value}，可点击播放或单步开始。`;
+      return;
+    }
     if (graphPlayerStatus.value === 'playing') {
       graphPlayer.pause();
     }
@@ -1187,6 +1551,18 @@ watch(removeK, () => {
   listVizState.note = `已更新 k=${removeK.value}，可重新播放。`;
 });
 
+watch(treeInput, () => {
+  if (!isTreeAlgo.value) return;
+  const values = parseTreeInput(treeInput.value);
+  if (!values) {
+    treeVizState.note = '输入格式错误：请使用层序逗号分隔，例如 1,2,3,null,4';
+    return;
+  }
+  const nextTree = buildBinaryTree(values, { id: 'tree', label: '二叉树' });
+  resetTreePlayer(nextTree, '已更新树结构，可点击播放或单步开始。');
+  void saveTreeDebounced(nextTree);
+});
+
 function isEditingText(): boolean {
   const el = document.activeElement as HTMLElement | null;
   if (!el) return false;
@@ -1198,7 +1574,7 @@ function isEditingText(): boolean {
 function onKeyDown(evt: KeyboardEvent) {
   if (isEditingText()) return;
   if (graphPlayerStatus.value === 'playing') return;
-  if (isListAlgo.value) return;
+  if (isListAlgo.value || isStackAlgo.value || isQueueAlgo.value || isTreeAlgo.value) return;
   if (evt.altKey) return;
 
   const key = evt.key.toLowerCase();
@@ -1248,6 +1624,26 @@ async function loadGraphFromServer() {
   }
 }
 
+async function loadTreeFromServer(): Promise<boolean> {
+  if (!auth.token) return false;
+  const res = await fetch(apiUrl('/tree'), {
+    headers: { authorization: `Bearer ${auth.token}` },
+  });
+  if (res.status === 401) {
+    auth.logout();
+    return false;
+  }
+  if (!res.ok) return false;
+  const data = await res.json();
+  if (isValidTreeView(data?.tree)) {
+    const tree = data.tree as TreeView;
+    resetTreePlayer(tree, '已加载云端树。');
+    saveTreeToLocal(tree);
+    return true;
+  }
+  return false;
+}
+
 function formatAuthError(e: any): string {
   if (!e) return '未知错误';
   
@@ -1293,6 +1689,10 @@ async function onLogin() {
     vizState.note = '登录成功。现在可以编辑图。';
     pushToast('success', '登录成功');
     await loadGraphFromServer();
+    const loaded = await loadTreeFromServer();
+    if (!loaded) {
+      restoreTreeFromLocal('云端无数据，已加载本地树。');
+    }
     await router.push('/');
   } catch (e: any) {
     authError.value = formatAuthError(e) || '登录失败';
@@ -1300,8 +1700,9 @@ async function onLogin() {
   }
 }
 
-function onLogout() {
-  auth.logout();
+async function onLogout() {
+  await saveTreeImmediately(treeModel.value);
+  await auth.logout();
   vizState.note = '已退出登录。现在只能浏览，无法编辑图。';
   pushToast('info', '已退出登录');
 }
@@ -1341,6 +1742,11 @@ watch(
     }
     if (ok) {
       void loadGraphFromServer();
+      void loadTreeFromServer().then((loaded) => {
+        if (!loaded) {
+          restoreTreeFromLocal('云端无数据，已加载本地树。');
+        }
+      });
     }
   },
   { immediate: true }
@@ -1474,6 +1880,10 @@ watch(
 
 .k-input {
   width: 120px;
+}
+
+.tree-input {
+  width: 260px;
 }
 :deep(.el-menu) {
   border-right: none;

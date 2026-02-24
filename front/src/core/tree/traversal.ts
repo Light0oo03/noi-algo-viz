@@ -15,17 +15,19 @@ export function generateTraversalTrace(
 
   function preorder(nodeId: number | null, state: TreeVizState): void {
     if (nodeId === null) return;
+    const nodeStates = state.nodeStates[tree.id];
+    if (!nodeStates) return;
 
     const node = findNode(tree, nodeId);
     if (!node) return;
 
-    state.nodeStates[tree.id][nodeId] = 'active';
+    nodeStates[nodeId] = 'active';
     state.note = `🔍 访问节点 ${node.value}`;
     state.highlightLines = [2, 2];
     addStep(state, 'visit');
 
     visited.push(node.value);
-    state.nodeStates[tree.id][nodeId] = 'visited';
+    nodeStates[nodeId] = 'visited';
     state.note = `✅ 已访问: [${visited.join(', ')}]`;
     addStep(state, 'mark-visited');
 
@@ -46,11 +48,13 @@ export function generateTraversalTrace(
 
   function inorder(nodeId: number | null, state: TreeVizState): void {
     if (nodeId === null) return;
+    const nodeStates = state.nodeStates[tree.id];
+    if (!nodeStates) return;
 
     const node = findNode(tree, nodeId);
     if (!node) return;
 
-    state.nodeStates[tree.id][nodeId] = 'active';
+    nodeStates[nodeId] = 'active';
     state.note = `🔍 到达节点 ${node.value}`;
     addStep(state, 'reach');
 
@@ -66,7 +70,7 @@ export function generateTraversalTrace(
     addStep(state, 'visit');
 
     visited.push(node.value);
-    state.nodeStates[tree.id][nodeId] = 'visited';
+    nodeStates[nodeId] = 'visited';
     state.note = `✅ 已访问: [${visited.join(', ')}]`;
     addStep(state, 'mark-visited');
 
@@ -80,11 +84,13 @@ export function generateTraversalTrace(
 
   function postorder(nodeId: number | null, state: TreeVizState): void {
     if (nodeId === null) return;
+    const nodeStates = state.nodeStates[tree.id];
+    if (!nodeStates) return;
 
     const node = findNode(tree, nodeId);
     if (!node) return;
 
-    state.nodeStates[tree.id][nodeId] = 'active';
+    nodeStates[nodeId] = 'active';
     state.note = `🔍 到达节点 ${node.value}`;
     addStep(state, 'reach');
 
@@ -107,7 +113,7 @@ export function generateTraversalTrace(
     addStep(state, 'visit');
 
     visited.push(node.value);
-    state.nodeStates[tree.id][nodeId] = 'visited';
+    nodeStates[nodeId] = 'visited';
     state.note = `✅ 已访问: [${visited.join(', ')}]`;
     addStep(state, 'mark-visited');
   }

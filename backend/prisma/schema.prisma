@@ -16,11 +16,19 @@ model User {
   updatedAt    DateTime @updatedAt
 
   graph UserGraph?
+  tree  UserTree?
 }
 
 model UserGraph {
   userId    String   @id
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   graphJson String
+  updatedAt DateTime @updatedAt
+}
+
+model UserTree {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  treeJson  String
   updatedAt DateTime @updatedAt
 }

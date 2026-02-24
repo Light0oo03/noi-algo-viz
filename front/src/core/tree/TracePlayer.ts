@@ -6,19 +6,25 @@ export type TreePlayerStatus = 'idle' | 'ready' | 'playing' | 'paused' | 'ended'
 export class TreeTracePlayer {
   private initialState: TreeVizState;
   private trace: TreeTrace = { steps: [] };
-  public stepIndex: number = -1;
+  public stepIndex = -1;
   private status: TreePlayerStatus = 'idle';
   private timer: number | null = null;
+  private options: {
+    interval: number;
+    onStateChange: (state: TreeVizState) => void;
+    onStatusChange: (status: TreePlayerStatus) => void;
+  };
 
   constructor(
     initialState: TreeVizState,
-    private options: {
+    options: {
       interval: number;
       onStateChange: (state: TreeVizState) => void;
       onStatusChange: (status: TreePlayerStatus) => void;
     }
   ) {
     this.initialState = cloneTreeVizState(initialState);
+    this.options = options;
   }
 
   get totalSteps(): number {
@@ -75,6 +81,7 @@ export class TreeTracePlayer {
 
     this.stepIndex++;
     const step = this.trace.steps[this.stepIndex];
+    if (!step) return;
     this.options.onStateChange(cloneTreeVizState(step.state));
 
     if (this.stepIndex >= this.trace.steps.length - 1 && this.status === 'playing') {
@@ -92,6 +99,7 @@ export class TreeTracePlayer {
 
     this.stepIndex--;
     const step = this.trace.steps[this.stepIndex];
+    if (!step) return;
     this.options.onStateChange(cloneTreeVizState(step.state));
   }
 
@@ -102,6 +110,7 @@ export class TreeTracePlayer {
 
     this.stepIndex = index;
     const step = this.trace.steps[this.stepIndex];
+    if (!step) return;
     this.options.onStateChange(cloneTreeVizState(step.state));
   }
 

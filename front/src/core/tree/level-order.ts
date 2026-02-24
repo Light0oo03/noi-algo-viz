@@ -11,6 +11,10 @@ export function generateLevelOrderTrace(tree: TreeView): TreeTrace {
   }
 
   const state = cloneTreeVizState(initialState);
+  const nodeStates = state.nodeStates[tree.id];
+  if (!nodeStates) {
+    return { steps };
+  }
   state.note = '🌲 开始层序遍历（BFS）';
   state.highlightLines = [1, 1];
   addStep(state, 'start');
@@ -37,23 +41,23 @@ export function generateLevelOrderTrace(tree: TreeView): TreeTrace {
     const node = findNode(tree, nodeId);
     if (!node) continue;
 
-    state.nodeStates[tree.id][nodeId] = 'active';
+    nodeStates[nodeId] = 'active';
     state.highlightLines = [4, 4];
     state.note = `📤 出队节点 ${node.value}`;
     addStep(state, 'dequeue');
 
     visited.push(node.value);
-    state.nodeStates[tree.id][nodeId] = 'visited';
+    nodeStates[nodeId] = 'visited';
     state.note = `✅ 访问节点 ${node.value}\n已访问: [${visited.join(', ')}]`;
     state.highlightLines = [5, 5];
     addStep(state, 'visit');
 
     if (node.left !== null) {
       const leftNode = findNode(tree, node.left);
-      if (leftNode && state.nodeStates[tree.id][node.left] === 'default') {
+      if (leftNode && nodeStates[node.left] === 'default') {
         queue.push(node.left);
         state.queue = [...queue];
-        state.nodeStates[tree.id][node.left] = 'frontier';
+        nodeStates[node.left] = 'frontier';
         state.note = `⬅️ 将左子节点 ${leftNode.value} 加入队列`;
         state.highlightLines = [6, 6];
         addStep(state, 'enqueue-left');
@@ -62,10 +66,10 @@ export function generateLevelOrderTrace(tree: TreeView): TreeTrace {
 
     if (node.right !== null) {
       const rightNode = findNode(tree, node.right);
-      if (rightNode && state.nodeStates[tree.id][node.right] === 'default') {
+      if (rightNode && nodeStates[node.right] === 'default') {
         queue.push(node.right);
         state.queue = [...queue];
-        state.nodeStates[tree.id][node.right] = 'frontier';
+        nodeStates[node.right] = 'frontier';
         state.note = `➡️ 将右子节点 ${rightNode.value} 加入队列`;
         state.highlightLines = [7, 7];
         addStep(state, 'enqueue-right');

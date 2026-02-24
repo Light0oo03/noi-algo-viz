@@ -41,3 +41,9 @@ There is no unified automated test suite yet. Validate changes with:
   - linked issue/task,
   - screenshots or short recordings for UI changes,
   - verification notes (manual steps + build results).
+
+## Persistence Rule for Visual Editors
+- Any user-editable visualization structure (for example graph/tree shape edits) must persist both locally and on backend.
+- Save locally on every structural change, with account-scoped keys (for example `prefix:<userId>`, `guest` when logged out).
+- For authenticated users, auto-sync changes to backend (debounced is fine) and load backend state first on login/refresh.
+- Keep data isolated per account; switching accounts must load that account’s last saved structure.

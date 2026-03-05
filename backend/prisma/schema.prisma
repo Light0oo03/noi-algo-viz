@@ -15,8 +15,10 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  graph UserGraph?
-  tree  UserTree?
+  graph  UserGraph?
+  tree   UserTree?
+  search UserSearch?
+  sort   UserSort?
 }
 
 model UserGraph {
@@ -31,4 +33,18 @@ model UserTree {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   treeJson  String
   updatedAt DateTime @updatedAt
+}
+
+model UserSearch {
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  searchJson  String
+  updatedAt   DateTime @updatedAt
+}
+
+model UserSort {
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sortJson    String
+  updatedAt   DateTime @updatedAt
 }

@@ -31,3 +31,8 @@ backend/src/generated/prisma
 .cursor/
 .trae/
 .claude/
+
+# Thesis docs (local only)
+record/开题报告模板.docx
+record/*开题报告*.docx
+record/*开题报告*.md

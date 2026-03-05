@@ -47,3 +47,4 @@ There is no unified automated test suite yet. Validate changes with:
 - Save locally on every structural change, with account-scoped keys (for example `prefix:<userId>`, `guest` when logged out).
 - For authenticated users, auto-sync changes to backend (debounced is fine) and load backend state first on login/refresh.
 - Keep data isolated per account; switching accounts must load that account’s last saved structure.
+- For modules that currently have no backend model yet (for example search/sort input arrays and targets), local account-scoped persistence is still required at minimum.

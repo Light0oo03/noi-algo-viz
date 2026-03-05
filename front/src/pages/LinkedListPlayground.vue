@@ -32,6 +32,7 @@
         :current-step="currentStep"
         :total-steps="totalSteps"
         :selected-algo="selectedAlgo"
+        :algo-options="algoOptions"
         @update:selected-algo="selectedAlgo = $event"
         @play="play"
         @pause="pause"
@@ -83,6 +84,13 @@ const router = useRouter();
 
 const selectedAlgo = ref<string>('reverse');
 const removeK = ref<number>(2);
+const algoOptions = [
+  { label: '反转链表', value: 'reverse' },
+  { label: '链表中点（快慢指针）', value: 'middle' },
+  { label: '判断环（Floyd）', value: 'cycle' },
+  { label: '合并有序链表', value: 'merge' },
+  { label: '删除倒数第 k 个', value: 'remove-k' },
+];
 
 function buildListsForAlgo(algo: string): ListView[] {
   switch (algo) {

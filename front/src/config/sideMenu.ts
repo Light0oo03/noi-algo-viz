@@ -21,6 +21,10 @@ export const sideMenuSections: MenuSection[] = [
       { id: 'dijkstra', label: 'Dijkstra 最短路径', algoKey: 'dijkstra' },
       { id: 'prim', label: 'Prim 最小生成树', algoKey: 'prim' },
       { id: 'kruskal', label: 'Kruskal 最小生成树', algoKey: 'kruskal' },
+      { id: 'floyd', label: 'Floyd 全源最短路', algoKey: 'floyd' },
+      { id: 'bellman-ford', label: 'Bellman-Ford 最短路径', algoKey: 'bellman-ford' },
+      { id: 'topological-sort', label: '拓扑排序（Kahn）', algoKey: 'topological-sort' },
+      { id: 'critical-path', label: '关键路径（AOE）', algoKey: 'critical-path' },
     ],
   },
   {
@@ -67,11 +71,30 @@ export const sideMenuSections: MenuSection[] = [
   {
     id: 'search',
     title: '查找',
-    items: [{ id: 'search-placeholder', label: '敬请期待', disabled: true }],
+    items: [
+      { id: 'linear-search', label: '线性查找', algoKey: 'linear-search' },
+      { id: 'binary-search', label: '二分查找', algoKey: 'binary-search' },
+      { id: 'jump-search', label: '跳跃查找', algoKey: 'jump-search' },
+      { id: 'interpolation-search', label: '插值查找', algoKey: 'interpolation-search' },
+      { id: 'exponential-search', label: '指数查找', algoKey: 'exponential-search' },
+      { id: 'fibonacci-search', label: 'Fibonacci 查找', algoKey: 'fibonacci-search' },
+      { id: 'hash-open-search', label: '哈希查找（开放定址）', algoKey: 'hash-open-search' },
+      { id: 'hash-chain-search', label: '哈希查找（拉链法）', algoKey: 'hash-chain-search' },
+    ],
   },
   {
     id: 'sort',
     title: '排序',
-    items: [{ id: 'sort-placeholder', label: '敬请期待', disabled: true }],
+    items: [
+      { id: 'bubble-sort', label: '冒泡排序', algoKey: 'bubble-sort' },
+      { id: 'selection-sort', label: '选择排序', algoKey: 'selection-sort' },
+      { id: 'insertion-sort', label: '插入排序', algoKey: 'insertion-sort' },
+      { id: 'quick-sort', label: '快速排序', algoKey: 'quick-sort' },
+      { id: 'merge-sort', label: '归并排序', algoKey: 'merge-sort' },
+      { id: 'heap-sort', label: '堆排序', algoKey: 'heap-sort' },
+      { id: 'shell-sort', label: '希尔排序', algoKey: 'shell-sort' },
+      { id: 'counting-sort', label: '计数排序', algoKey: 'counting-sort' },
+      { id: 'radix-sort', label: '基数排序', algoKey: 'radix-sort' },
+    ],
   },
 ];

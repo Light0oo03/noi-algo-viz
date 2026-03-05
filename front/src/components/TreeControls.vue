@@ -16,10 +16,12 @@
 
     <div class="bar">
       <el-select v-model="algoValue" size="small" class="algo-select">
-        <el-option label="前序遍历" value="preorder" />
-        <el-option label="中序遍历" value="inorder" />
-        <el-option label="后序遍历" value="postorder" />
-        <el-option label="层序遍历" value="level-order" />
+        <el-option
+          v-for="option in algoOptions"
+          :key="option.value"
+          :label="option.label"
+          :value="option.value"
+        />
       </el-select>
 
       <slot name="extra" />
@@ -42,6 +44,7 @@ const props = defineProps<{
   currentStep: number;
   totalSteps: number;
   selectedAlgo: string;
+  algoOptions: { label: string; value: string }[];
 }>();
 
 const emit = defineEmits<{

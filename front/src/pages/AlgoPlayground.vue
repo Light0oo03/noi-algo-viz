@@ -407,6 +407,7 @@ import { createInitialSortVizState } from '../core/sort/types';
 import { generateBubbleSortTrace } from '../core/sort/bubble';
 import { generateSelectionSortTrace } from '../core/sort/selection';
 import { generateInsertionSortTrace } from '../core/sort/insertion';
+import { generateBinaryInsertionSortTrace } from '../core/sort/binary-insertion';
 import { generateQuickSortTrace } from '../core/sort/quick';
 import { generateMergeSortTrace } from '../core/sort/merge';
 import { generateHeapSortTrace } from '../core/sort/heap';
@@ -416,6 +417,7 @@ import { generateRadixSortTrace } from '../core/sort/radix';
 import { BUBBLE_SORT_CODE_JS } from '../core/sort/bubble-code';
 import { SELECTION_SORT_CODE_JS } from '../core/sort/selection-code';
 import { INSERTION_SORT_CODE_JS } from '../core/sort/insertion-code';
+import { BINARY_INSERTION_SORT_CODE_JS } from '../core/sort/binary-insertion-code';
 import { QUICK_SORT_CODE_JS } from '../core/sort/quick-code';
 import { MERGE_SORT_CODE_JS } from '../core/sort/merge-code';
 import { HEAP_SORT_CODE_JS } from '../core/sort/heap-code';
@@ -689,6 +691,7 @@ const isSortAlgo = computed(() => (
   selectedAlgo.value === 'bubble-sort'
   || selectedAlgo.value === 'selection-sort'
   || selectedAlgo.value === 'insertion-sort'
+  || selectedAlgo.value === 'binary-insertion-sort'
   || selectedAlgo.value === 'quick-sort'
   || selectedAlgo.value === 'merge-sort'
   || selectedAlgo.value === 'heap-sort'
@@ -841,6 +844,8 @@ const currentAlgoCode = computed(() => {
       return SELECTION_SORT_CODE_JS;
     case 'insertion-sort':
       return INSERTION_SORT_CODE_JS;
+    case 'binary-insertion-sort':
+      return BINARY_INSERTION_SORT_CODE_JS;
     case 'quick-sort':
       return QUICK_SORT_CODE_JS;
     case 'merge-sort':
@@ -934,6 +939,8 @@ const currentAlgoTitle = computed(() => {
       return '选择排序';
     case 'insertion-sort':
       return '插入排序';
+    case 'binary-insertion-sort':
+      return '折半插入排序';
     case 'quick-sort':
       return '快速排序';
     case 'merge-sort':
@@ -1027,6 +1034,8 @@ const currentAlgoName = computed(() => {
       return '选择排序';
     case 'insertion-sort':
       return '插入排序';
+    case 'binary-insertion-sort':
+      return '折半插入排序';
     case 'quick-sort':
       return '快速排序';
     case 'merge-sort':
@@ -1120,6 +1129,8 @@ const currentAlgoDesc = computed(() => {
       return '当前：排序 / 选择排序';
     case 'insertion-sort':
       return '当前：排序 / 插入排序';
+    case 'binary-insertion-sort':
+      return '当前：排序 / 折半插入排序';
     case 'quick-sort':
       return '当前：排序 / 快速排序';
     case 'merge-sort':
@@ -2145,6 +2156,10 @@ function generateTrace() {
     }
     if (selectedAlgo.value === 'insertion-sort') {
       sortPlayer.load(generateInsertionSortTrace(values));
+      return true;
+    }
+    if (selectedAlgo.value === 'binary-insertion-sort') {
+      sortPlayer.load(generateBinaryInsertionSortTrace(values));
       return true;
     }
     if (selectedAlgo.value === 'quick-sort') {

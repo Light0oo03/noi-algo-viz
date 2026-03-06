@@ -89,6 +89,7 @@ export const sideMenuSections: MenuSection[] = [
       { id: 'bubble-sort', label: '冒泡排序', algoKey: 'bubble-sort' },
       { id: 'selection-sort', label: '选择排序', algoKey: 'selection-sort' },
       { id: 'insertion-sort', label: '插入排序', algoKey: 'insertion-sort' },
+      { id: 'binary-insertion-sort', label: '折半插入排序', algoKey: 'binary-insertion-sort' },
       { id: 'quick-sort', label: '快速排序', algoKey: 'quick-sort' },
       { id: 'merge-sort', label: '归并排序', algoKey: 'merge-sort' },
       { id: 'heap-sort', label: '堆排序', algoKey: 'heap-sort' },

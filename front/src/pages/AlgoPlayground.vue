@@ -393,6 +393,7 @@ import { generateExponentialSearchTrace } from '../core/search/exponential';
 import { generateFibonacciSearchTrace } from '../core/search/fibonacci';
 import { generateHashOpenSearchTrace } from '../core/search/hash-open';
 import { generateHashChainSearchTrace } from '../core/search/hash-chain';
+import { generateBTreeSearchTrace } from '../core/search/b-tree';
 import { LINEAR_SEARCH_CODE_JS } from '../core/search/linear-code';
 import { BINARY_SEARCH_CODE_JS } from '../core/search/binary-code';
 import { JUMP_SEARCH_CODE_JS } from '../core/search/jump-code';
@@ -401,6 +402,7 @@ import { EXPONENTIAL_SEARCH_CODE_JS } from '../core/search/exponential-code';
 import { FIBONACCI_SEARCH_CODE_JS } from '../core/search/fibonacci-code';
 import { HASH_OPEN_SEARCH_CODE_JS } from '../core/search/hash-open-code';
 import { HASH_CHAIN_SEARCH_CODE_JS } from '../core/search/hash-chain-code';
+import { B_TREE_SEARCH_CODE_JS } from '../core/search/b-tree-code';
 import { SortTracePlayer, type SortPlayerStatus } from '../core/sort/TracePlayer';
 import type { SortVizState } from '../core/sort/types';
 import { createInitialSortVizState } from '../core/sort/types';
@@ -685,6 +687,7 @@ const isSearchAlgo = computed(() => (
   || selectedAlgo.value === 'fibonacci-search'
   || selectedAlgo.value === 'hash-open-search'
   || selectedAlgo.value === 'hash-chain-search'
+  || selectedAlgo.value === 'b-tree-search'
 ));
 
 const isSortAlgo = computed(() => (
@@ -838,6 +841,8 @@ const currentAlgoCode = computed(() => {
       return HASH_OPEN_SEARCH_CODE_JS;
     case 'hash-chain-search':
       return HASH_CHAIN_SEARCH_CODE_JS;
+    case 'b-tree-search':
+      return B_TREE_SEARCH_CODE_JS;
     case 'bubble-sort':
       return BUBBLE_SORT_CODE_JS;
     case 'selection-sort':
@@ -933,6 +938,8 @@ const currentAlgoTitle = computed(() => {
       return '哈希查找（开放定址）';
     case 'hash-chain-search':
       return '哈希查找（拉链法）';
+    case 'b-tree-search':
+      return 'B 树查找';
     case 'bubble-sort':
       return '冒泡排序';
     case 'selection-sort':
@@ -1028,6 +1035,8 @@ const currentAlgoName = computed(() => {
       return '哈希查找（开放定址）';
     case 'hash-chain-search':
       return '哈希查找（拉链法）';
+    case 'b-tree-search':
+      return 'B 树查找';
     case 'bubble-sort':
       return '冒泡排序';
     case 'selection-sort':
@@ -1123,6 +1132,8 @@ const currentAlgoDesc = computed(() => {
       return `当前：查找 / 哈希查找（开放定址，target=${searchTarget.value}）`;
     case 'hash-chain-search':
       return `当前：查找 / 哈希查找（拉链法，target=${searchTarget.value}）`;
+    case 'b-tree-search':
+      return `当前：查找 / B 树查找（自动去重排序，target=${searchTarget.value}）`;
     case 'bubble-sort':
       return '当前：排序 / 冒泡排序';
     case 'selection-sort':
@@ -2133,6 +2144,10 @@ function generateTrace() {
     }
     if (selectedAlgo.value === 'hash-chain-search') {
       searchPlayer.load(generateHashChainSearchTrace(items, searchTarget.value));
+      return true;
+    }
+    if (selectedAlgo.value === 'b-tree-search') {
+      searchPlayer.load(generateBTreeSearchTrace(items, searchTarget.value));
       return true;
     }
   }

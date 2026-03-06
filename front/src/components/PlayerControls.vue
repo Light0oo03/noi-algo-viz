@@ -1,26 +1,32 @@
 <template>
   <div class="player-controls">
     <!-- 进度条 -->
-    <div class="progress-wrapper" v-if="totalSteps > 0">
+    <div class="progress-wrapper">
       <el-slider
+        v-if="totalSteps > 0"
         v-model="sliderValue"
         :min="1"
         :max="totalSteps"
         :show-tooltip="true"
         :format-tooltip="formatTooltip"
       />
-      <div class="progress-text">{{ currentStep }} / {{ totalSteps }}</div>
+      <div v-else class="progress-empty">未开始</div>
+      <div v-if="totalSteps > 0" class="progress-text">{{ currentStep }} / {{ totalSteps }}</div>
+      <div v-else class="progress-text">0 / 0</div>
     </div>
 
     <!-- 控制按钮 -->
     <div class="bar">
       <el-select v-model="algoValue" size="small" class="algo-select">
-        <el-option label="BFS（广度优先搜索）" value="bfs" />
-        <el-option label="DFS（深度优先搜索）" value="dfs" />
-        <el-option label="Dijkstra（最短路径）" value="dijkstra" />
-        <el-option label="Prim（最小生成树）" value="prim" />
-        <el-option label="Kruskal（最小生成树）" value="kruskal" />
+        <el-option
+          v-for="option in algoOptions"
+          :key="option.value"
+          :label="option.label"
+          :value="option.value"
+        />
       </el-select>
+
+      <slot name="extra" />
 
       <el-button size="small" :disabled="currentStep <= 0 || status === 'playing'" @click="$emit('stepBack')">上一步</el-button>
       <el-button size="small" type="primary" @click="onPlayPause">{{ status === 'playing' ? '暂停' : '播放' }}</el-button>
@@ -41,6 +47,7 @@ const props = defineProps<{
   currentStep: number;
   totalSteps: number;
   selectedAlgo: string;
+  algoOptions: { label: string; value: string }[];
 }>();
 
 const emit = defineEmits<{
@@ -106,6 +113,20 @@ function onPlayPause() {
   position: relative;
   width: 100%;
   padding: 0 4px;
+  min-height: 40px;
+}
+
+.progress-empty {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .progress-text {

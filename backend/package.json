@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "commonjs",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
+    "dev": "pnpm db:push && tsx watch src/main.ts",
     "build": "node scripts/adjust-schema.js && prisma generate && tsc -p tsconfig.json",
     "start": "echo 'Running DB Push...' && prisma db push --accept-data-loss && echo 'Starting App...' && node dist/main.js",
     "prisma": "prisma",

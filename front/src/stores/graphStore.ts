@@ -5,13 +5,21 @@ import type { Graph } from '../core/graph/types';
 /** 默认图结构 */
 const DEFAULT_GRAPH: Graph = {
   nodes: [
-    { id: 0, x: 120, y: 120 },
-    { id: 1, x: 280, y: 180 },
-    { id: 2, x: 200, y: 300 },
+    { id: 0, x: 450, y: 170 },
+    { id: 1, x: 290, y: 280 },
+    { id: 2, x: 610, y: 280 },
+    { id: 3, x: 170, y: 430 },
+    { id: 4, x: 360, y: 430 },
+    { id: 5, x: 540, y: 430 },
+    { id: 6, x: 730, y: 430 },
   ],
   edges: [
     { u: 0, v: 1, w: 1 },
-    { u: 1, v: 2, w: 1 },
+    { u: 0, v: 2, w: 1 },
+    { u: 1, v: 3, w: 1 },
+    { u: 1, v: 4, w: 1 },
+    { u: 2, v: 5, w: 1 },
+    { u: 2, v: 6, w: 1 },
   ],
 };
 

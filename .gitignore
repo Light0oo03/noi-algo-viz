@@ -30,3 +30,5 @@ backend/src/generated/prisma
 
 .cursor/
 .trae/
+/record/**毕业设计**
+/record/**开题报告**

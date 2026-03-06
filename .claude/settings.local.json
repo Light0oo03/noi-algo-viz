@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(pnpm build:*)",
+      "Bash(curl:*)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(pnpm exec tsx:*)",
+      "Bash(node --loader ts-node/esm:*)"
+    ]
+  }
+}

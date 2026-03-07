@@ -81,6 +81,7 @@ export const sideMenuSections: MenuSection[] = [
       { id: 'hash-open-search', label: '哈希查找（开放定址）', algoKey: 'hash-open-search' },
       { id: 'hash-chain-search', label: '哈希查找（拉链法）', algoKey: 'hash-chain-search' },
       { id: 'b-tree-search', label: 'B 树查找', algoKey: 'b-tree-search' },
+      { id: 'b-plus-tree-search', label: 'B+ 树查找', algoKey: 'b-plus-tree-search' },
     ],
   },
   {

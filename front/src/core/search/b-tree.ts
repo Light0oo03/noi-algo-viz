@@ -138,6 +138,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
   state.treeNodes = treeNodes;
   state.activeTreeNodeId = root.id;
   state.note = `🚀 开始 B 树查找（已对输入去重并排序，共 ${keys.length} 个键）`;
+  state.routeHint = '规则：节点内从左到右比较；命中则结束，未命中下降到对应子节点';
   state.highlightLines = B_TREE_SEARCH_CODE_LINES.init;
   addStep('start');
 
@@ -155,6 +156,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
       state.pointers.right = Math.max(...nodeIndices);
     }
     state.note = `访问节点 keys=[${node.keys.join(', ')}]`;
+    state.routeHint = `当前节点键：${node.keys.join(', ')}；比较目标 ${target}`;
     addStep('visit-node');
 
     state.highlightLines = B_TREE_SEARCH_CODE_LINES.setI;
@@ -168,6 +170,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
         state.itemStates[state.items[idx]!.id] = 'pivot';
       }
       state.note = `${target} > ${node.keys[i]!}，继续比较下一键`;
+      state.routeHint = `${target} 大于 ${node.keys[i]!}，比较游标右移`;
       state.highlightLines = B_TREE_SEARCH_CODE_LINES.moveI;
       addStep('move-i');
       i++;
@@ -181,6 +184,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
         state.resultIndex = idx;
       }
       state.note = `✅ 命中键 ${target}`;
+      state.routeHint = '命中当前节点键，查找结束';
       state.highlightLines = B_TREE_SEARCH_CODE_LINES.found;
       addStep('found');
       return { steps };
@@ -195,6 +199,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
 
     if (node.leaf) {
       state.note = `❌ 到达叶子节点仍未找到 ${target}`;
+      state.routeHint = '叶子节点无目标键，查找失败';
       state.highlightLines = B_TREE_SEARCH_CODE_LINES.notFound;
       state.pointers.mid = undefined;
       addStep('leaf-not-found');
@@ -202,6 +207,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
     }
 
     state.note = `未命中，下降到第 ${i} 个子节点`;
+    state.routeHint = `根据比较结果选择第 ${i} 个子节点继续搜索`;
     state.highlightLines = B_TREE_SEARCH_CODE_LINES.descend;
     state.pointers.mid = undefined;
     addStep('descend');
@@ -210,6 +216,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
 
   state.activeTreeNodeId = null;
   state.note = `❌ 查找结束，未找到 ${target}`;
+  state.routeHint = '未命中任何路径';
   state.highlightLines = B_TREE_SEARCH_CODE_LINES.notFound;
   addStep('not-found');
   return { steps };

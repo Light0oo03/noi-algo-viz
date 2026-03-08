@@ -29,6 +29,7 @@ export interface SearchVizState {
   target: number;
   resultIndex: number | null;
   note: string;
+  routeHint?: string;
   highlightLines?: [number, number];
   treeNodes?: SearchTreeNodeView[];
   activeTreeNodeId?: string | null;
@@ -57,6 +58,7 @@ export function createInitialSearchVizState(items: number[], target: number): Se
     target,
     resultIndex: null,
     note: '准备开始查找... ',
+    routeHint: undefined,
     treeNodes: undefined,
     activeTreeNodeId: null,
   };
@@ -70,6 +72,7 @@ export function cloneSearchVizState(state: SearchVizState): SearchVizState {
     target: state.target,
     resultIndex: state.resultIndex,
     note: state.note,
+    routeHint: state.routeHint,
     highlightLines: state.highlightLines ? [...state.highlightLines] as [number, number] : undefined,
     treeNodes: state.treeNodes?.map((node) => ({
       id: node.id,

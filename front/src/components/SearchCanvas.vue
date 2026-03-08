@@ -1,5 +1,23 @@
 <template>
   <div class="search-canvas">
+    <div v-if="isTreeSearch" class="tree-viewport">
+      <div v-for="level in treeLevels" :key="`depth-${level.depth}`" class="tree-level">
+        <div
+          v-for="node in level.nodes"
+          :key="node.id"
+          :class="['tree-node', { active: state.activeTreeNodeId === node.id, leaf: node.leaf }]"
+        >
+          <div class="tree-node-head">
+            <span>{{ node.leaf ? '叶' : '内' }}</span>
+            <span>[{{ node.start }}, {{ node.end }}]</span>
+          </div>
+          <div class="tree-keys">
+            <span v-for="key in node.keys" :key="`${node.id}-${key}`" class="tree-key">{{ key }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="array-row">
       <div
         v-for="(item, index) in state.items"
@@ -21,11 +39,33 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { SearchVizState } from '../core/search/types';
 
 const props = defineProps<{
   state: SearchVizState;
+  algoKey?: string;
 }>();
+
+const isTreeSearch = computed(() => (
+  props.algoKey === 'b-tree-search' || props.algoKey === 'b-plus-tree-search'
+));
+
+const treeLevels = computed(() => {
+  const nodes = props.state.treeNodes ?? [];
+  const grouped = new Map<number, typeof nodes>();
+  nodes.forEach((node) => {
+    const list = grouped.get(node.depth) ?? [];
+    list.push(node);
+    grouped.set(node.depth, list);
+  });
+  return Array.from(grouped.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([depth, levelNodes]) => ({
+      depth,
+      nodes: [...levelNodes].sort((a, b) => a.order - b.order),
+    }));
+});
 
 function itemStateClass(id: number): string {
   const st = props.state.itemStates[id] ?? 'default';
@@ -50,6 +90,64 @@ function pointerStyle(index: number): Record<string, string> {
   padding: 60px 40px;
   min-height: 500px;
   overflow-x: auto;
+}
+
+.tree-viewport {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 10px 18px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.tree-level {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tree-node {
+  min-width: 120px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 2px solid #94a3b8;
+  background: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.tree-node.active {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.tree-node.leaf {
+  border-color: #22c55e;
+}
+
+.tree-node-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.tree-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tree-key {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  background: #e2e8f0;
 }
 
 .array-row {

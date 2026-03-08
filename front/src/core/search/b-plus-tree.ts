@@ -1,8 +1,9 @@
-import type { SearchTrace, SearchTraceStep } from './types';
+import type { SearchTrace, SearchTraceStep, SearchTreeNodeView } from './types';
 import { cloneSearchVizState, createInitialSearchVizState } from './types';
 import { B_PLUS_TREE_SEARCH_CODE_LINES } from './b-plus-tree-code';
 
 type BPlusNode = {
+  id: string;
   leaf: boolean;
   keys: number[];
   children: BPlusNode[];
@@ -27,6 +28,7 @@ function buildLeafLevel(keys: number[]): BPlusNode[] {
   for (let i = 0; i < keys.length; i += LEAF_CAPACITY) {
     const leafKeys = keys.slice(i, i + LEAF_CAPACITY);
     leaves.push({
+      id: `L-${i / LEAF_CAPACITY}`,
       leaf: true,
       keys: leafKeys,
       children: [],
@@ -37,7 +39,7 @@ function buildLeafLevel(keys: number[]): BPlusNode[] {
   return leaves;
 }
 
-function buildParentLevel(level: BPlusNode[]): BPlusNode[] {
+function buildParentLevel(level: BPlusNode[], depth: number): BPlusNode[] {
   const parents: BPlusNode[] = [];
   for (let i = 0; i < level.length; i += BRANCHING) {
     const children = level.slice(i, i + BRANCHING);
@@ -46,6 +48,7 @@ function buildParentLevel(level: BPlusNode[]): BPlusNode[] {
       keys.push(firstKey(children[c]!));
     }
     parents.push({
+      id: `N-${depth}-${i / BRANCHING}`,
       leaf: false,
       keys,
       children,
@@ -59,10 +62,27 @@ function buildParentLevel(level: BPlusNode[]): BPlusNode[] {
 function buildBPlusTree(keys: number[]): BPlusNode | null {
   if (keys.length === 0) return null;
   let level = buildLeafLevel(keys);
+  let depth = 1;
   while (level.length > 1) {
-    level = buildParentLevel(level);
+    level = buildParentLevel(level, depth);
+    depth++;
   }
   return level[0]!;
+}
+
+function collectTreeNodes(node: BPlusNode, depth: number, orderBase: number, list: SearchTreeNodeView[]) {
+  list.push({
+    id: node.id,
+    keys: [...node.keys],
+    depth,
+    order: orderBase,
+    leaf: node.leaf,
+    start: node.start,
+    end: node.end,
+  });
+  node.children.forEach((child, idx) => {
+    collectTreeNodes(child, depth + 1, orderBase * 10 + idx, list);
+  });
 }
 
 export function generateBPlusTreeSearchTrace(items: number[], target: number): SearchTrace {
@@ -84,12 +104,23 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
   }
 
   const root = buildBPlusTree(keys);
+  if (!root) {
+    state.note = '❌ B+ 树为空，无法查找';
+    state.highlightLines = B_PLUS_TREE_SEARCH_CODE_LINES.notFound;
+    addStep('empty');
+    return { steps };
+  }
+  const treeNodes: SearchTreeNodeView[] = [];
+  collectTreeNodes(root, 0, 1, treeNodes);
+  state.treeNodes = treeNodes;
+  state.activeTreeNodeId = root.id;
   state.note = `🚀 开始 B+ 树查找（去重排序后 ${keys.length} 个键）`;
   state.highlightLines = B_PLUS_TREE_SEARCH_CODE_LINES.init;
   addStep('start');
 
-  let node = root;
+  let node: BPlusNode | null = root;
   while (node && !node.leaf) {
+    state.activeTreeNodeId = node.id;
     state.pointers.left = node.start;
     state.pointers.right = node.end;
     state.highlightLines = B_PLUS_TREE_SEARCH_CODE_LINES.routeLoop;
@@ -127,12 +158,14 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
   }
 
   if (!node) {
+    state.activeTreeNodeId = null;
     state.note = `❌ 查找结束，未找到 ${target}`;
     state.highlightLines = B_PLUS_TREE_SEARCH_CODE_LINES.notFound;
     addStep('not-found');
     return { steps };
   }
 
+  state.activeTreeNodeId = node.id;
   state.pointers.left = node.start;
   state.pointers.right = node.end;
   state.note = `到达叶子节点 keys=[${node.keys.join(', ')}]，线性扫描`;
@@ -161,6 +194,7 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
   }
 
   state.pointers.index = undefined;
+  state.activeTreeNodeId = null;
   state.note = `❌ 叶子扫描结束，未找到 ${target}`;
   state.highlightLines = B_PLUS_TREE_SEARCH_CODE_LINES.notFound;
   addStep('leaf-not-found');

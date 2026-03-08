@@ -12,6 +12,16 @@ export interface SearchPointers {
   mid?: number;
 }
 
+export interface SearchTreeNodeView {
+  id: string;
+  keys: number[];
+  depth: number;
+  order: number;
+  leaf: boolean;
+  start: number;
+  end: number;
+}
+
 export interface SearchVizState {
   items: SearchItem[];
   itemStates: Record<number, SearchItemState>;
@@ -20,6 +30,8 @@ export interface SearchVizState {
   resultIndex: number | null;
   note: string;
   highlightLines?: [number, number];
+  treeNodes?: SearchTreeNodeView[];
+  activeTreeNodeId?: string | null;
 }
 
 export interface SearchTraceStep {
@@ -45,6 +57,8 @@ export function createInitialSearchVizState(items: number[], target: number): Se
     target,
     resultIndex: null,
     note: '准备开始查找... ',
+    treeNodes: undefined,
+    activeTreeNodeId: null,
   };
 }
 
@@ -57,5 +71,15 @@ export function cloneSearchVizState(state: SearchVizState): SearchVizState {
     resultIndex: state.resultIndex,
     note: state.note,
     highlightLines: state.highlightLines ? [...state.highlightLines] as [number, number] : undefined,
+    treeNodes: state.treeNodes?.map((node) => ({
+      id: node.id,
+      keys: [...node.keys],
+      depth: node.depth,
+      order: node.order,
+      leaf: node.leaf,
+      start: node.start,
+      end: node.end,
+    })),
+    activeTreeNodeId: state.activeTreeNodeId ?? null,
   };
 }

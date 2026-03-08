@@ -1,11 +1,14 @@
-import type { SearchTrace, SearchTraceStep } from './types';
+import type { SearchTrace, SearchTraceStep, SearchTreeNodeView } from './types';
 import { cloneSearchVizState, createInitialSearchVizState } from './types';
 import { B_TREE_SEARCH_CODE_LINES } from './b-tree-code';
 
 type BTreeNode = {
+  id: string;
   keys: number[];
   children: BTreeNode[];
   leaf: boolean;
+  start: number;
+  end: number;
 };
 
 const MIN_DEGREE = 2; // 2-3-4 tree
@@ -15,13 +18,13 @@ function uniqueSorted(items: number[]): number[] {
   return Array.from(new Set(items)).sort((a, b) => a - b);
 }
 
-function createNode(leaf: boolean): BTreeNode {
-  return { keys: [], children: [], leaf };
+function createNode(leaf: boolean, id: string): BTreeNode {
+  return { id, keys: [], children: [], leaf, start: -1, end: -1 };
 }
 
 function splitChild(parent: BTreeNode, idx: number) {
   const full = parent.children[idx]!;
-  const right = createNode(full.leaf);
+  const right = createNode(full.leaf, `${full.id}R${idx}`);
   const midKey = full.keys[MIN_DEGREE - 1]!;
 
   right.keys = full.keys.slice(MIN_DEGREE);
@@ -60,10 +63,10 @@ function insertNonFull(node: BTreeNode, key: number) {
 
 function buildBTree(keys: number[]): BTreeNode | null {
   if (keys.length === 0) return null;
-  let root = createNode(true);
+  let root = createNode(true, 'root');
   for (const key of keys) {
     if (root.keys.length === MAX_KEYS) {
-      const next = createNode(false);
+      const next = createNode(false, `up-${key}`);
       next.children.push(root);
       splitChild(next, 0);
       root = next;
@@ -71,6 +74,35 @@ function buildBTree(keys: number[]): BTreeNode | null {
     insertNonFull(root, key);
   }
   return root;
+}
+
+function annotateRange(node: BTreeNode, keyIndex: Map<number, number>) {
+  if (node.leaf) {
+    const indices = node.keys.map((k) => keyIndex.get(k)).filter((v): v is number => v !== undefined);
+    node.start = indices.length > 0 ? Math.min(...indices) : -1;
+    node.end = indices.length > 0 ? Math.max(...indices) : -1;
+    return;
+  }
+  for (const child of node.children) annotateRange(child, keyIndex);
+  const starts = node.children.map((c) => c.start).filter((v) => v >= 0);
+  const ends = node.children.map((c) => c.end).filter((v) => v >= 0);
+  node.start = starts.length > 0 ? Math.min(...starts) : -1;
+  node.end = ends.length > 0 ? Math.max(...ends) : -1;
+}
+
+function collectTreeNodes(node: BTreeNode, depth: number, orderBase: number, list: SearchTreeNodeView[]) {
+  list.push({
+    id: node.id,
+    keys: [...node.keys],
+    depth,
+    order: orderBase,
+    leaf: node.leaf,
+    start: node.start,
+    end: node.end,
+  });
+  node.children.forEach((child, idx) => {
+    collectTreeNodes(child, depth + 1, orderBase * 10 + idx, list);
+  });
 }
 
 export function generateBTreeSearchTrace(items: number[], target: number): SearchTrace {
@@ -94,12 +126,24 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
   }
 
   const root = buildBTree(keys);
+  if (!root) {
+    state.note = '❌ B 树为空，无法查找';
+    state.highlightLines = B_TREE_SEARCH_CODE_LINES.notFound;
+    addStep('empty');
+    return { steps };
+  }
+  annotateRange(root, keyIndex);
+  const treeNodes: SearchTreeNodeView[] = [];
+  collectTreeNodes(root, 0, 1, treeNodes);
+  state.treeNodes = treeNodes;
+  state.activeTreeNodeId = root.id;
   state.note = `🚀 开始 B 树查找（已对输入去重并排序，共 ${keys.length} 个键）`;
   state.highlightLines = B_TREE_SEARCH_CODE_LINES.init;
   addStep('start');
 
   let node: BTreeNode | null = root;
   while (node) {
+    state.activeTreeNodeId = node.id;
     state.highlightLines = B_TREE_SEARCH_CODE_LINES.loop;
     for (const k of node.keys) {
       const idx = keyIndex.get(k);
@@ -164,6 +208,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
     node = node.children[i] ?? null;
   }
 
+  state.activeTreeNodeId = null;
   state.note = `❌ 查找结束，未找到 ${target}`;
   state.highlightLines = B_TREE_SEARCH_CODE_LINES.notFound;
   addStep('not-found');

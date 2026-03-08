@@ -81,7 +81,7 @@
           @note="setTreeNote"
           @disabled-action="onDisabledTreeAction"
         />
-        <SearchCanvas v-else-if="isSearchAlgo" :state="searchVizState" />
+        <SearchCanvas v-else-if="isSearchAlgo" :state="searchVizState" :algo-key="selectedAlgo" />
         <SortCanvas v-else-if="isSortAlgo" :state="sortVizState" />
         <div ref="floatingPanelRef" class="floating-panel" :style="floatingPanelStyle">
           <div class="floating-panel-drag-handle" @mousedown="onFloatingPanelDragStart">拖动说明面板</div>

@@ -14,7 +14,7 @@
         <line
           v-for="edge in treeEdges"
           :key="`tree-${edge.from}-${edge.to}`"
-          class="tree-edge"
+          :class="['tree-edge', { active: isActiveTreeEdge(edge.from, edge.to) }]"
           :x1="edge.x1"
           :y1="edge.y1"
           :x2="edge.x2"
@@ -201,6 +201,11 @@ function itemStateClass(id: number): string {
   return `item-${st}`;
 }
 
+function isActiveTreeEdge(from: string, to: string): boolean {
+  const edge = props.state.activeTreeEdge;
+  return !!edge && edge.from === from && edge.to === to;
+}
+
 function pointerStyle(index: number): Record<string, string> {
   return {
     left: `${index * 90 + 35}px`,
@@ -244,6 +249,11 @@ function pointerStyle(index: number): Record<string, string> {
 .tree-edge {
   stroke: #64748b;
   stroke-width: 2;
+}
+
+.tree-edge.active {
+  stroke: #2563eb;
+  stroke-width: 3;
 }
 
 .leaf-edge {

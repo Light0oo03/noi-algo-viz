@@ -1,11 +1,42 @@
 <template>
   <div class="search-canvas">
-    <div v-if="isTreeSearch" class="tree-viewport">
+    <div v-if="isTreeSearch" ref="treeViewportRef" class="tree-viewport">
+      <svg
+        v-if="treeSvg.width > 0 && treeSvg.height > 0"
+        class="tree-links"
+        :viewBox="`0 0 ${treeSvg.width} ${treeSvg.height}`"
+      >
+        <defs>
+          <marker id="leaf-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+            <path d="M0,0 L8,4 L0,8 Z" fill="#16a34a" />
+          </marker>
+        </defs>
+        <line
+          v-for="edge in treeEdges"
+          :key="`tree-${edge.from}-${edge.to}`"
+          class="tree-edge"
+          :x1="edge.x1"
+          :y1="edge.y1"
+          :x2="edge.x2"
+          :y2="edge.y2"
+        />
+        <line
+          v-for="edge in leafEdges"
+          :key="`leaf-${edge.from}-${edge.to}`"
+          class="leaf-edge"
+          :x1="edge.x1"
+          :y1="edge.y1"
+          :x2="edge.x2"
+          :y2="edge.y2"
+          marker-end="url(#leaf-arrow)"
+        />
+      </svg>
       <div v-for="level in treeLevels" :key="`depth-${level.depth}`" class="tree-level">
         <div
           v-for="node in level.nodes"
           :key="node.id"
           :class="['tree-node', { active: state.activeTreeNodeId === node.id, leaf: node.leaf }]"
+          :ref="(el) => setTreeNodeRef(node.id, el as Element | null)"
         >
           <div class="tree-node-head">
             <span>{{ node.leaf ? '叶' : '内' }}</span>
@@ -39,8 +70,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { SearchVizState } from '../core/search/types';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import type { SearchTreeNodeView, SearchVizState } from '../core/search/types';
 
 const props = defineProps<{
   state: SearchVizState;
@@ -50,6 +81,12 @@ const props = defineProps<{
 const isTreeSearch = computed(() => (
   props.algoKey === 'b-tree-search' || props.algoKey === 'b-plus-tree-search'
 ));
+
+const treeViewportRef = ref<HTMLElement | null>(null);
+const treeEdges = ref<Array<{ from: string; to: string; x1: number; y1: number; x2: number; y2: number }>>([]);
+const leafEdges = ref<Array<{ from: string; to: string; x1: number; y1: number; x2: number; y2: number }>>([]);
+const treeSvg = reactive({ width: 0, height: 0 });
+const nodeElMap = new Map<string, HTMLElement>();
 
 const treeLevels = computed(() => {
   const nodes = props.state.treeNodes ?? [];
@@ -66,6 +103,98 @@ const treeLevels = computed(() => {
       nodes: [...levelNodes].sort((a, b) => a.order - b.order),
     }));
 });
+
+function setTreeNodeRef(nodeId: string, el: Element | null) {
+  if (el instanceof HTMLElement) {
+    nodeElMap.set(nodeId, el);
+  } else {
+    nodeElMap.delete(nodeId);
+  }
+}
+
+function getPoint(node: SearchTreeNodeView, anchor: 'top' | 'bottom' | 'left' | 'right') {
+  const root = treeViewportRef.value;
+  const el = nodeElMap.get(node.id);
+  if (!root || !el) return null;
+  const rootRect = root.getBoundingClientRect();
+  const rect = el.getBoundingClientRect();
+  if (anchor === 'top') return { x: rect.left - rootRect.left + rect.width / 2, y: rect.top - rootRect.top };
+  if (anchor === 'bottom') return { x: rect.left - rootRect.left + rect.width / 2, y: rect.bottom - rootRect.top };
+  if (anchor === 'left') return { x: rect.left - rootRect.left, y: rect.top - rootRect.top + rect.height / 2 };
+  return { x: rect.right - rootRect.left, y: rect.top - rootRect.top + rect.height / 2 };
+}
+
+function rebuildTreeLinks() {
+  const root = treeViewportRef.value;
+  if (!root || !isTreeSearch.value) {
+    treeEdges.value = [];
+    leafEdges.value = [];
+    treeSvg.width = 0;
+    treeSvg.height = 0;
+    return;
+  }
+  treeSvg.width = root.clientWidth;
+  treeSvg.height = root.clientHeight;
+
+  const nodes = props.state.treeNodes ?? [];
+  const nodeMap = new Map<string, SearchTreeNodeView>();
+  const byDepthOrder = new Map<string, SearchTreeNodeView>();
+  nodes.forEach((node) => {
+    nodeMap.set(node.id, node);
+    byDepthOrder.set(`${node.depth}:${node.order}`, node);
+  });
+
+  const nextTreeEdges: Array<{ from: string; to: string; x1: number; y1: number; x2: number; y2: number }> = [];
+  for (const child of nodes) {
+    if (child.depth <= 0) continue;
+    const parent = byDepthOrder.get(`${child.depth - 1}:${Math.floor(child.order / 10)}`);
+    if (!parent) continue;
+    const p1 = getPoint(parent, 'bottom');
+    const p2 = getPoint(child, 'top');
+    if (!p1 || !p2) continue;
+    nextTreeEdges.push({ from: parent.id, to: child.id, x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y });
+  }
+  treeEdges.value = nextTreeEdges;
+
+  if (props.algoKey === 'b-plus-tree-search') {
+    const leaves = nodes.filter((n) => n.leaf).sort((a, b) => a.order - b.order);
+    const nextLeafEdges: Array<{ from: string; to: string; x1: number; y1: number; x2: number; y2: number }> = [];
+    for (let i = 0; i < leaves.length - 1; i++) {
+      const left = leaves[i]!;
+      const right = leaves[i + 1]!;
+      const p1 = getPoint(left, 'right');
+      const p2 = getPoint(right, 'left');
+      if (!p1 || !p2) continue;
+      nextLeafEdges.push({ from: left.id, to: right.id, x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y });
+    }
+    leafEdges.value = nextLeafEdges;
+  } else {
+    leafEdges.value = [];
+  }
+}
+
+function scheduleRebuild() {
+  nextTick(() => rebuildTreeLinks());
+}
+
+function onResize() {
+  scheduleRebuild();
+}
+
+onMounted(() => {
+  window.addEventListener('resize', onResize);
+  scheduleRebuild();
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', onResize);
+});
+
+watch(
+  () => [props.state.treeNodes, props.algoKey],
+  () => scheduleRebuild(),
+  { deep: true }
+);
 
 function itemStateClass(id: number): string {
   const st = props.state.itemStates[id] ?? 'default';
@@ -93,6 +222,7 @@ function pointerStyle(index: number): Record<string, string> {
 }
 
 .tree-viewport {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -102,7 +232,29 @@ function pointerStyle(index: number): Record<string, string> {
   background: #f8fafc;
 }
 
+.tree-links {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.tree-edge {
+  stroke: #64748b;
+  stroke-width: 2;
+}
+
+.leaf-edge {
+  stroke: #16a34a;
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+}
+
 .tree-level {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: center;
   flex-wrap: wrap;

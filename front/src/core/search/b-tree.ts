@@ -138,6 +138,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
   state.treeNodes = treeNodes;
   state.activeTreeNodeId = root.id;
   state.activeTreeEdge = null;
+  state.activeChildIndex = null;
   state.visitedTreeEdges = [];
   state.note = `🚀 开始 B 树查找（已对输入去重并排序，共 ${keys.length} 个键）`;
   state.routeHint = '规则：节点内从左到右比较；命中则结束，未命中下降到对应子节点';
@@ -188,6 +189,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
       state.note = `✅ 命中键 ${target}`;
       state.routeHint = '命中当前节点键，查找结束';
       state.activeTreeEdge = null;
+      state.activeChildIndex = null;
       state.highlightLines = B_TREE_SEARCH_CODE_LINES.found;
       addStep('found');
       return { steps };
@@ -204,6 +206,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
       state.note = `❌ 到达叶子节点仍未找到 ${target}`;
       state.routeHint = '叶子节点无目标键，查找失败';
       state.activeTreeEdge = null;
+      state.activeChildIndex = null;
       state.highlightLines = B_TREE_SEARCH_CODE_LINES.notFound;
       state.pointers.mid = undefined;
       addStep('leaf-not-found');
@@ -214,6 +217,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
     state.note = `未命中，下降到第 ${i} 个子节点`;
     state.routeHint = `根据比较结果选择第 ${i} 个子节点继续搜索`;
     state.activeTreeEdge = nextNode ? { from: node.id, to: nextNode.id } : null;
+    state.activeChildIndex = nextNode ? i : null;
     if (state.activeTreeEdge) {
       state.visitedTreeEdges = [...(state.visitedTreeEdges ?? []), { ...state.activeTreeEdge }];
     }
@@ -225,6 +229,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
 
   state.activeTreeNodeId = null;
   state.activeTreeEdge = null;
+  state.activeChildIndex = null;
   state.note = `❌ 查找结束，未找到 ${target}`;
   state.routeHint = '未命中任何路径';
   state.highlightLines = B_TREE_SEARCH_CODE_LINES.notFound;

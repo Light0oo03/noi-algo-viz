@@ -115,6 +115,7 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
   state.treeNodes = treeNodes;
   state.activeTreeNodeId = root.id;
   state.activeTreeEdge = null;
+  state.activeChildIndex = null;
   state.visitedTreeEdges = [];
   state.note = `🚀 开始 B+ 树查找（去重排序后 ${keys.length} 个键）`;
   state.routeHint = '规则：内部节点按分隔键路由，叶子节点顺序扫描';
@@ -160,6 +161,7 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
     state.note = `下降到第 ${i} 个子节点`;
     state.routeHint = `根据分隔键比较选择第 ${i} 个子节点`;
     state.activeTreeEdge = nextNode ? { from: node.id, to: nextNode.id } : null;
+    state.activeChildIndex = nextNode ? i : null;
     if (state.activeTreeEdge) {
       state.visitedTreeEdges = [...(state.visitedTreeEdges ?? []), { ...state.activeTreeEdge }];
     }
@@ -171,6 +173,7 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
   if (!node) {
     state.activeTreeNodeId = null;
     state.activeTreeEdge = null;
+    state.activeChildIndex = null;
     state.note = `❌ 查找结束，未找到 ${target}`;
     state.routeHint = '路由失败，未定位到有效叶子';
     state.highlightLines = B_PLUS_TREE_SEARCH_CODE_LINES.notFound;
@@ -180,6 +183,7 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
 
   state.activeTreeNodeId = node.id;
   state.activeTreeEdge = null;
+  state.activeChildIndex = null;
   state.pointers.left = node.start;
   state.pointers.right = node.end;
   state.note = `到达叶子节点 keys=[${node.keys.join(', ')}]，线性扫描`;
@@ -203,6 +207,7 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
       state.note = `✅ 命中键 ${target}`;
       state.routeHint = '命中叶子键，查找结束';
       state.activeTreeEdge = null;
+      state.activeChildIndex = null;
       state.highlightLines = B_PLUS_TREE_SEARCH_CODE_LINES.found;
       addStep('found');
       return { steps };
@@ -214,6 +219,7 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
   state.pointers.index = undefined;
   state.activeTreeNodeId = null;
   state.activeTreeEdge = null;
+  state.activeChildIndex = null;
   state.note = `❌ 叶子扫描结束，未找到 ${target}`;
   state.routeHint = '叶子节点扫描完成，未命中';
   state.highlightLines = B_PLUS_TREE_SEARCH_CODE_LINES.notFound;

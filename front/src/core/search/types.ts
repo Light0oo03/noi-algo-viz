@@ -34,6 +34,7 @@ export interface SearchVizState {
   treeNodes?: SearchTreeNodeView[];
   activeTreeNodeId?: string | null;
   activeTreeEdge?: { from: string; to: string } | null;
+  activeChildIndex?: number | null;
   visitedTreeEdges?: Array<{ from: string; to: string }>;
 }
 
@@ -64,6 +65,7 @@ export function createInitialSearchVizState(items: number[], target: number): Se
     treeNodes: undefined,
     activeTreeNodeId: null,
     activeTreeEdge: null,
+    activeChildIndex: null,
     visitedTreeEdges: [],
   };
 }
@@ -89,6 +91,7 @@ export function cloneSearchVizState(state: SearchVizState): SearchVizState {
     })),
     activeTreeNodeId: state.activeTreeNodeId ?? null,
     activeTreeEdge: state.activeTreeEdge ? { ...state.activeTreeEdge } : null,
+    activeChildIndex: state.activeChildIndex ?? null,
     visitedTreeEdges: state.visitedTreeEdges?.map((edge) => ({ ...edge })) ?? [],
   };
 }

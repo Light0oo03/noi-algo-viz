@@ -26,6 +26,19 @@
           :x2="edge.x2"
           :y2="edge.y2"
         />
+        <g v-if="activeEdgeLabel">
+          <rect
+            class="edge-label-bg"
+            :x="activeEdgeLabel.x - 28"
+            :y="activeEdgeLabel.y - 10"
+            width="56"
+            height="20"
+            rx="10"
+          />
+          <text class="edge-label-text" :x="activeEdgeLabel.x" :y="activeEdgeLabel.y + 4">
+            child {{ activeEdgeLabel.childIndex }}
+          </text>
+        </g>
         <line
           v-for="edge in leafEdges"
           :key="`leaf-${edge.from}-${edge.to}`"
@@ -91,6 +104,7 @@ const isTreeSearch = computed(() => (
 const treeViewportRef = ref<HTMLElement | null>(null);
 const treeEdges = ref<Array<{ from: string; to: string; x1: number; y1: number; x2: number; y2: number }>>([]);
 const leafEdges = ref<Array<{ from: string; to: string; x1: number; y1: number; x2: number; y2: number }>>([]);
+const activeEdgeLabel = ref<{ x: number; y: number; childIndex: number } | null>(null);
 const treeSvg = reactive({ width: 0, height: 0 });
 const nodeElMap = new Map<string, HTMLElement>();
 
@@ -135,6 +149,7 @@ function rebuildTreeLinks() {
   if (!root || !isTreeSearch.value) {
     treeEdges.value = [];
     leafEdges.value = [];
+    activeEdgeLabel.value = null;
     treeSvg.width = 0;
     treeSvg.height = 0;
     return;
@@ -161,6 +176,22 @@ function rebuildTreeLinks() {
     nextTreeEdges.push({ from: parent.id, to: child.id, x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y });
   }
   treeEdges.value = nextTreeEdges;
+  const active = props.state.activeTreeEdge;
+  const activeIndex = props.state.activeChildIndex;
+  if (active && activeIndex !== null && activeIndex !== undefined) {
+    const edge = nextTreeEdges.find((item) => item.from === active.from && item.to === active.to);
+    if (edge) {
+      activeEdgeLabel.value = {
+        x: (edge.x1 + edge.x2) / 2,
+        y: (edge.y1 + edge.y2) / 2 - 6,
+        childIndex: activeIndex,
+      };
+    } else {
+      activeEdgeLabel.value = null;
+    }
+  } else {
+    activeEdgeLabel.value = null;
+  }
 
   if (props.algoKey === 'b-plus-tree-search') {
     const leaves = nodes.filter((n) => n.leaf).sort((a, b) => a.order - b.order);
@@ -276,6 +307,17 @@ function pointerStyle(index: number): Record<string, string> {
   stroke: #16a34a;
   stroke-width: 2;
   stroke-dasharray: 4 4;
+}
+
+.edge-label-bg {
+  fill: rgba(37, 99, 235, 0.92);
+}
+
+.edge-label-text {
+  fill: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
 }
 
 .tree-level {

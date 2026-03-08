@@ -34,6 +34,7 @@ export interface SearchVizState {
   treeNodes?: SearchTreeNodeView[];
   activeTreeNodeId?: string | null;
   activeTreeEdge?: { from: string; to: string } | null;
+  visitedTreeEdges?: Array<{ from: string; to: string }>;
 }
 
 export interface SearchTraceStep {
@@ -63,6 +64,7 @@ export function createInitialSearchVizState(items: number[], target: number): Se
     treeNodes: undefined,
     activeTreeNodeId: null,
     activeTreeEdge: null,
+    visitedTreeEdges: [],
   };
 }
 
@@ -87,5 +89,6 @@ export function cloneSearchVizState(state: SearchVizState): SearchVizState {
     })),
     activeTreeNodeId: state.activeTreeNodeId ?? null,
     activeTreeEdge: state.activeTreeEdge ? { ...state.activeTreeEdge } : null,
+    visitedTreeEdges: state.visitedTreeEdges?.map((edge) => ({ ...edge })) ?? [],
   };
 }

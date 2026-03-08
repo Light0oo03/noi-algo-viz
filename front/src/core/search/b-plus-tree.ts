@@ -115,6 +115,7 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
   state.treeNodes = treeNodes;
   state.activeTreeNodeId = root.id;
   state.activeTreeEdge = null;
+  state.visitedTreeEdges = [];
   state.note = `🚀 开始 B+ 树查找（去重排序后 ${keys.length} 个键）`;
   state.routeHint = '规则：内部节点按分隔键路由，叶子节点顺序扫描';
   state.highlightLines = B_PLUS_TREE_SEARCH_CODE_LINES.init;
@@ -159,6 +160,9 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
     state.note = `下降到第 ${i} 个子节点`;
     state.routeHint = `根据分隔键比较选择第 ${i} 个子节点`;
     state.activeTreeEdge = nextNode ? { from: node.id, to: nextNode.id } : null;
+    if (state.activeTreeEdge) {
+      state.visitedTreeEdges = [...(state.visitedTreeEdges ?? []), { ...state.activeTreeEdge }];
+    }
     addStep('descend');
     node = nextNode;
     state.pointers.mid = undefined;

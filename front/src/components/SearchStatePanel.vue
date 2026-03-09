@@ -40,6 +40,9 @@
         <div class="manual-copy-head">
           <span>浏览器限制复制，请手动复制以下路径：</span>
           <div class="manual-copy-actions">
+            <button type="button" class="path-btn" @click="selectManualCopyText(true)">
+              {{ selectButtonText }}
+            </button>
             <button type="button" class="path-btn" @click="retryCopy">重试复制</button>
             <button type="button" class="path-btn" @click="hideManualFallback">关闭</button>
           </div>
@@ -49,7 +52,7 @@
           class="manual-copy-input mono"
           readonly
           :value="visitedNodePathText"
-          @focus="selectManualCopyText"
+          @focus="handleManualCopyFocus"
         />
         <div class="manual-copy-hint">快捷键：{{ copyShortcutHint }}</div>
       </div>
@@ -87,9 +90,11 @@ const visitedNodePathText = computed(() => {
 const hasNodePath = computed(() => (props.state.visitedTreeNodeIds?.length ?? 0) > 0);
 const isPathExpanded = ref(false);
 const copyButtonText = ref('复制');
+const selectButtonText = ref('全选文本');
 const showManualCopyFallback = ref(false);
 const manualCopyTextareaRef = ref<HTMLTextAreaElement | null>(null);
 let copyTextTimer: number | null = null;
+let selectTextTimer: number | null = null;
 const copyShortcutHint = computed(() => (
   typeof navigator !== 'undefined' && /mac/i.test(navigator.platform) ? 'Command + C' : 'Ctrl + C'
 ));
@@ -99,6 +104,7 @@ watch(
   (path) => {
     isPathExpanded.value = path.length <= 48;
     resetCopyButtonText();
+    resetSelectButtonText();
     showManualCopyFallback.value = false;
   },
   { immediate: true }
@@ -156,10 +162,17 @@ function hideManualFallback() {
   showManualCopyFallback.value = false;
 }
 
-function selectManualCopyText() {
+function handleManualCopyFocus() {
+  selectManualCopyText();
+}
+
+function selectManualCopyText(fromButton = false) {
   if (!manualCopyTextareaRef.value) return;
   manualCopyTextareaRef.value.focus();
   manualCopyTextareaRef.value.select();
+  if (fromButton) {
+    setSelectButtonFeedback('已全选');
+  }
 }
 
 async function retryCopy() {
@@ -192,9 +205,33 @@ function resetCopyButtonText() {
   copyButtonText.value = '复制';
 }
 
+function setSelectButtonFeedback(text: string) {
+  selectButtonText.value = text;
+  if (selectTextTimer !== null) {
+    window.clearTimeout(selectTextTimer);
+    selectTextTimer = null;
+  }
+  if (text !== '全选文本') {
+    selectTextTimer = window.setTimeout(() => {
+      resetSelectButtonText();
+    }, 1500);
+  }
+}
+
+function resetSelectButtonText() {
+  if (selectTextTimer !== null) {
+    window.clearTimeout(selectTextTimer);
+    selectTextTimer = null;
+  }
+  selectButtonText.value = '全选文本';
+}
+
 onBeforeUnmount(() => {
   if (copyTextTimer !== null) {
     window.clearTimeout(copyTextTimer);
+  }
+  if (selectTextTimer !== null) {
+    window.clearTimeout(selectTextTimer);
   }
 });
 </script>

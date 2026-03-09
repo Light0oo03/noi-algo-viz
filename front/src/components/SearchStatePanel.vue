@@ -36,6 +36,19 @@
         </div>
       </div>
       <div class="meta mono node-path" :class="{ collapsed: !isPathExpanded }">{{ visitedNodePathText }}</div>
+      <div v-if="showManualCopyFallback" class="manual-copy">
+        <div class="manual-copy-head">
+          <span>浏览器限制复制，请手动复制以下路径：</span>
+          <button type="button" class="path-btn" @click="hideManualFallback">关闭</button>
+        </div>
+        <textarea
+          ref="manualCopyTextareaRef"
+          class="manual-copy-input mono"
+          readonly
+          :value="visitedNodePathText"
+          @focus="selectManualCopyText"
+        />
+      </div>
     </div>
 
     <div class="section">
@@ -70,12 +83,15 @@ const visitedNodePathText = computed(() => {
 const hasNodePath = computed(() => (props.state.visitedTreeNodeIds?.length ?? 0) > 0);
 const isPathExpanded = ref(false);
 const copyButtonText = ref('复制');
+const showManualCopyFallback = ref(false);
+const manualCopyTextareaRef = ref<HTMLTextAreaElement | null>(null);
 
 watch(
   () => visitedNodePathText.value,
   (path) => {
     isPathExpanded.value = path.length <= 48;
     copyButtonText.value = '复制';
+    showManualCopyFallback.value = false;
   },
   { immediate: true }
 );
@@ -87,7 +103,11 @@ function togglePathExpanded() {
 async function copyNodePath() {
   if (!hasNodePath.value) return;
   const ok = await copyText(visitedNodePathText.value);
-  copyButtonText.value = ok ? '已复制' : '复制失败';
+  copyButtonText.value = ok ? '已复制' : '复制失败，请手动复制';
+  showManualCopyFallback.value = !ok;
+  if (!ok) {
+    requestAnimationFrame(() => selectManualCopyText());
+  }
 }
 
 async function copyText(text: string): Promise<boolean> {
@@ -122,6 +142,16 @@ async function copyText(text: string): Promise<boolean> {
 
 function pointerText(value: number | undefined): string {
   return value === undefined ? '-' : String(value);
+}
+
+function hideManualFallback() {
+  showManualCopyFallback.value = false;
+}
+
+function selectManualCopyText() {
+  if (!manualCopyTextareaRef.value) return;
+  manualCopyTextareaRef.value.focus();
+  manualCopyTextareaRef.value.select();
 }
 </script>
 
@@ -199,5 +229,35 @@ function pointerText(value: number | undefined): string {
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.manual-copy {
+  margin-top: 4px;
+  padding: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 251, 235, 0.85);
+}
+
+.manual-copy-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #92400e;
+  margin-bottom: 6px;
+}
+
+.manual-copy-input {
+  width: 100%;
+  min-height: 58px;
+  resize: vertical;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1f2937;
+  font-size: 12px;
 }
 </style>

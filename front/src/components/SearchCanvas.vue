@@ -502,6 +502,11 @@ function pointerStyle(index: number): Record<string, string> {
   border-color: #22c55e;
 }
 
+.tree-node.leaf.visited:not(.active) {
+  border-color: #16a34a;
+  background: #ecfdf5;
+}
+
 .tree-node-head {
   display: flex;
   justify-content: space-between;

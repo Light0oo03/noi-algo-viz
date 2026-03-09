@@ -22,6 +22,9 @@
       <div class="section-title">🧭 树路由</div>
       <div class="meta">active-node: {{ activeTreeNodeText }}</div>
       <div class="meta">rule: {{ state.routeHint || '-' }}</div>
+      <div class="meta">visited-nodes: {{ visitedNodeCount }}</div>
+      <div class="meta">visited-edges: {{ visitedEdgeCount }}</div>
+      <div class="meta mono">node-path: {{ visitedNodePathText }}</div>
     </div>
 
     <div class="section">
@@ -45,6 +48,13 @@ const activeTreeNodeText = computed(() => {
   const node = props.state.treeNodes.find((item) => item.id === props.state.activeTreeNodeId);
   if (!node) return '-';
   return `${node.id} keys=[${node.keys.join(', ')}]`;
+});
+
+const visitedNodeCount = computed(() => props.state.visitedTreeNodeIds?.length ?? 0);
+const visitedEdgeCount = computed(() => props.state.visitedTreeEdges?.length ?? 0);
+const visitedNodePathText = computed(() => {
+  const ids = props.state.visitedTreeNodeIds ?? [];
+  return ids.length > 0 ? ids.join(' -> ') : '-';
 });
 
 function pointerText(value: number | undefined): string {
@@ -86,5 +96,10 @@ function pointerText(value: number | undefined): string {
 .meta {
   font-size: 12px;
   color: var(--muted-2);
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  word-break: break-all;
 }
 </style>

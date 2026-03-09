@@ -1,6 +1,11 @@
 <template>
   <div class="search-canvas">
     <div v-if="isTreeSearch" ref="treeViewportRef" class="tree-viewport">
+      <div class="tree-legend">
+        <span class="legend-item"><i class="legend-line active"></i>当前路由边</span>
+        <span class="legend-item"><i class="legend-line visited"></i>已走过路径</span>
+        <span v-if="props.algoKey === 'b-plus-tree-search'" class="legend-item"><i class="legend-line leaf"></i>B+ 叶子链</span>
+      </div>
       <svg
         v-if="treeSvg.width > 0 && treeSvg.height > 0"
         class="tree-links"
@@ -29,9 +34,9 @@
         <g v-if="activeEdgeLabel">
           <rect
             class="edge-label-bg"
-            :x="activeEdgeLabel.x - 28"
+            :x="activeEdgeLabel.x - activeEdgeLabel.width / 2"
             :y="activeEdgeLabel.y - 10"
-            width="56"
+            :width="activeEdgeLabel.width"
             height="20"
             rx="10"
           />
@@ -104,7 +109,7 @@ const isTreeSearch = computed(() => (
 const treeViewportRef = ref<HTMLElement | null>(null);
 const treeEdges = ref<Array<{ from: string; to: string; x1: number; y1: number; x2: number; y2: number }>>([]);
 const leafEdges = ref<Array<{ from: string; to: string; x1: number; y1: number; x2: number; y2: number }>>([]);
-const activeEdgeLabel = ref<{ x: number; y: number; childIndex: number } | null>(null);
+const activeEdgeLabel = ref<{ x: number; y: number; childIndex: number; width: number } | null>(null);
 const treeSvg = reactive({ width: 0, height: 0 });
 const nodeElMap = new Map<string, HTMLElement>();
 
@@ -182,9 +187,10 @@ function rebuildTreeLinks() {
     const edge = nextTreeEdges.find((item) => item.from === active.from && item.to === active.to);
     if (edge) {
       activeEdgeLabel.value = {
-        x: (edge.x1 + edge.x2) / 2,
-        y: (edge.y1 + edge.y2) / 2 - 6,
+        x: (edge.x1 + edge.x2) / 2 + labelOffset(edge).dx,
+        y: (edge.y1 + edge.y2) / 2 + labelOffset(edge).dy,
         childIndex: activeIndex,
+        width: edgeLabelWidth(activeIndex),
       };
     } else {
       activeEdgeLabel.value = null;
@@ -248,6 +254,21 @@ function isVisitedTreeEdge(from: string, to: string): boolean {
   return list.some((edge) => edge.from === from && edge.to === to);
 }
 
+function edgeLabelWidth(childIndex: number): number {
+  const text = `child ${childIndex}`;
+  return Math.max(56, text.length * 7 + 14);
+}
+
+function labelOffset(edge: { x1: number; y1: number; x2: number; y2: number }) {
+  const dx = edge.x2 - edge.x1;
+  const dy = edge.y2 - edge.y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const dist = 14;
+  return { dx: nx * dist, dy: ny * dist };
+}
+
 function pointerStyle(index: number): Record<string, string> {
   return {
     left: `${index * 90 + 35}px`,
@@ -277,6 +298,43 @@ function pointerStyle(index: number): Record<string, string> {
   border: 1px dashed #cbd5e1;
   border-radius: 10px;
   background: #f8fafc;
+}
+
+.tree-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  font-size: 12px;
+  color: #334155;
+  padding: 2px 2px 6px;
+  z-index: 1;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-line {
+  width: 18px;
+  height: 0;
+  border-top: 3px solid #64748b;
+  display: inline-block;
+}
+
+.legend-line.active {
+  border-top-color: #2563eb;
+}
+
+.legend-line.visited {
+  border-top-color: #38bdf8;
+}
+
+.legend-line.leaf {
+  border-top-color: #16a34a;
+  border-top-style: dashed;
 }
 
 .tree-links {

@@ -39,7 +39,10 @@
       <div v-if="showManualCopyFallback" class="manual-copy">
         <div class="manual-copy-head">
           <span>浏览器限制复制，请手动复制以下路径：</span>
-          <button type="button" class="path-btn" @click="hideManualFallback">关闭</button>
+          <div class="manual-copy-actions">
+            <button type="button" class="path-btn" @click="retryCopy">重试复制</button>
+            <button type="button" class="path-btn" @click="hideManualFallback">关闭</button>
+          </div>
         </div>
         <textarea
           ref="manualCopyTextareaRef"
@@ -48,6 +51,7 @@
           :value="visitedNodePathText"
           @focus="selectManualCopyText"
         />
+        <div class="manual-copy-hint">快捷键：{{ copyShortcutHint }}</div>
       </div>
     </div>
 
@@ -85,6 +89,9 @@ const isPathExpanded = ref(false);
 const copyButtonText = ref('复制');
 const showManualCopyFallback = ref(false);
 const manualCopyTextareaRef = ref<HTMLTextAreaElement | null>(null);
+const copyShortcutHint = computed(() => (
+  typeof navigator !== 'undefined' && /mac/i.test(navigator.platform) ? 'Command + C' : 'Ctrl + C'
+));
 
 watch(
   () => visitedNodePathText.value,
@@ -152,6 +159,15 @@ function selectManualCopyText() {
   if (!manualCopyTextareaRef.value) return;
   manualCopyTextareaRef.value.focus();
   manualCopyTextareaRef.value.select();
+}
+
+async function retryCopy() {
+  const ok = await copyText(visitedNodePathText.value);
+  copyButtonText.value = ok ? '已复制' : '复制失败，请手动复制';
+  showManualCopyFallback.value = !ok;
+  if (!ok) {
+    requestAnimationFrame(() => selectManualCopyText());
+  }
 }
 </script>
 
@@ -249,6 +265,12 @@ function selectManualCopyText() {
   margin-bottom: 6px;
 }
 
+.manual-copy-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .manual-copy-input {
   width: 100%;
   min-height: 58px;
@@ -259,5 +281,11 @@ function selectManualCopyText() {
   background: rgba(255, 255, 255, 0.95);
   color: #1f2937;
   font-size: 12px;
+}
+
+.manual-copy-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #a16207;
 }
 </style>

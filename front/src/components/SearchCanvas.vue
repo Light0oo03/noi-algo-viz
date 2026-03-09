@@ -5,6 +5,7 @@
         <span class="legend-item"><i class="legend-line active"></i>当前路由边</span>
         <span class="legend-item"><i class="legend-line visited"></i>已走过路径</span>
         <span v-if="props.algoKey === 'b-plus-tree-search'" class="legend-item"><i class="legend-line leaf"></i>B+ 叶子链</span>
+        <span class="legend-item"><i class="legend-node visited"></i>已访问节点</span>
       </div>
       <svg
         v-if="treeSvg.width > 0 && treeSvg.height > 0"
@@ -59,7 +60,14 @@
         <div
           v-for="node in level.nodes"
           :key="node.id"
-          :class="['tree-node', { active: state.activeTreeNodeId === node.id, leaf: node.leaf }]"
+          :class="[
+            'tree-node',
+            {
+              active: state.activeTreeNodeId === node.id,
+              leaf: node.leaf,
+              visited: isVisitedTreeNode(node.id),
+            },
+          ]"
           :ref="(el) => setTreeNodeRef(node.id, el as Element | null)"
         >
           <div class="tree-node-head">
@@ -186,11 +194,13 @@ function rebuildTreeLinks() {
   if (active && activeIndex !== null && activeIndex !== undefined) {
     const edge = nextTreeEdges.find((item) => item.from === active.from && item.to === active.to);
     if (edge) {
+      const width = edgeLabelWidth(activeIndex);
+      const best = chooseLabelPosition(edge, width, 20);
       activeEdgeLabel.value = {
-        x: (edge.x1 + edge.x2) / 2 + labelOffset(edge).dx,
-        y: (edge.y1 + edge.y2) / 2 + labelOffset(edge).dy,
+        x: best.x,
+        y: best.y,
         childIndex: activeIndex,
-        width: edgeLabelWidth(activeIndex),
+        width,
       };
     } else {
       activeEdgeLabel.value = null;
@@ -254,6 +264,10 @@ function isVisitedTreeEdge(from: string, to: string): boolean {
   return list.some((edge) => edge.from === from && edge.to === to);
 }
 
+function isVisitedTreeNode(nodeId: string): boolean {
+  return (props.state.visitedTreeNodeIds ?? []).includes(nodeId);
+}
+
 function edgeLabelWidth(childIndex: number): number {
   const text = `child ${childIndex}`;
   return Math.max(56, text.length * 7 + 14);
@@ -267,6 +281,71 @@ function labelOffset(edge: { x1: number; y1: number; x2: number; y2: number }) {
   const ny = dx / len;
   const dist = 14;
   return { dx: nx * dist, dy: ny * dist };
+}
+
+function chooseLabelPosition(
+  edge: { x1: number; y1: number; x2: number; y2: number },
+  width: number,
+  height: number
+) {
+  const midX = (edge.x1 + edge.x2) / 2;
+  const midY = (edge.y1 + edge.y2) / 2;
+  const base = labelOffset(edge);
+  const candidates = [
+    { x: midX + base.dx, y: midY + base.dy },
+    { x: midX - base.dx, y: midY - base.dy },
+    { x: midX + base.dx * 1.6, y: midY + base.dy * 1.6 },
+    { x: midX - base.dx * 1.6, y: midY - base.dy * 1.6 },
+  ];
+
+  const root = treeViewportRef.value;
+  const maxW = root?.clientWidth ?? 0;
+  const maxH = root?.clientHeight ?? 0;
+
+  const normalized = candidates.map((pos) => ({
+    x: clamp(pos.x, width / 2 + 2, Math.max(width / 2 + 2, maxW - width / 2 - 2)),
+    y: clamp(pos.y, height / 2 + 2, Math.max(height / 2 + 2, maxH - height / 2 - 2)),
+  }));
+
+  const nodeRects = Array.from(nodeElMap.values()).map((el) => {
+    const rootRect = root?.getBoundingClientRect();
+    const rect = el.getBoundingClientRect();
+    if (!rootRect) return null;
+    return {
+      left: rect.left - rootRect.left,
+      right: rect.right - rootRect.left,
+      top: rect.top - rootRect.top,
+      bottom: rect.bottom - rootRect.top,
+    };
+  }).filter((r): r is { left: number; right: number; top: number; bottom: number } => !!r);
+
+  let best = normalized[0] ?? { x: midX, y: midY };
+  let bestScore = Number.POSITIVE_INFINITY;
+  for (const pos of normalized) {
+    const rect = {
+      left: pos.x - width / 2,
+      right: pos.x + width / 2,
+      top: pos.y - height / 2,
+      bottom: pos.y + height / 2,
+    };
+    let overlapCount = 0;
+    for (const node of nodeRects) {
+      if (!(rect.right < node.left || rect.left > node.right || rect.bottom < node.top || rect.top > node.bottom)) {
+        overlapCount++;
+      }
+    }
+    const distancePenalty = Math.abs(pos.x - midX) + Math.abs(pos.y - midY);
+    const score = overlapCount * 1000 + distancePenalty;
+    if (score < bestScore) {
+      bestScore = score;
+      best = pos;
+    }
+  }
+  return best;
+}
+
+function clamp(v: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, v));
 }
 
 function pointerStyle(index: number): Record<string, string> {
@@ -337,6 +416,19 @@ function pointerStyle(index: number): Record<string, string> {
   border-top-style: dashed;
 }
 
+.legend-node {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid #94a3b8;
+  display: inline-block;
+}
+
+.legend-node.visited {
+  border-color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.16);
+}
+
 .tree-links {
   position: absolute;
   inset: 0;
@@ -401,8 +493,18 @@ function pointerStyle(index: number): Record<string, string> {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
+.tree-node.visited:not(.active) {
+  border-color: #0ea5e9;
+  background: #f0f9ff;
+}
+
 .tree-node.leaf {
   border-color: #22c55e;
+}
+
+.tree-node.leaf.visited:not(.active) {
+  border-color: #16a34a;
+  background: #ecfdf5;
 }
 
 .tree-node-head {

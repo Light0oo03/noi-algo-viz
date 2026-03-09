@@ -140,6 +140,7 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
   state.activeTreeEdge = null;
   state.activeChildIndex = null;
   state.visitedTreeEdges = [];
+  state.visitedTreeNodeIds = [root.id];
   state.note = `🚀 开始 B 树查找（已对输入去重并排序，共 ${keys.length} 个键）`;
   state.routeHint = '规则：节点内从左到右比较；命中则结束，未命中下降到对应子节点';
   state.highlightLines = B_TREE_SEARCH_CODE_LINES.init;
@@ -148,6 +149,9 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
   let node: BTreeNode | null = root;
   while (node) {
     state.activeTreeNodeId = node.id;
+    if (!(state.visitedTreeNodeIds ?? []).includes(node.id)) {
+      state.visitedTreeNodeIds = [...(state.visitedTreeNodeIds ?? []), node.id];
+    }
     state.highlightLines = B_TREE_SEARCH_CODE_LINES.loop;
     for (const k of node.keys) {
       const idx = keyIndex.get(k);
@@ -225,6 +229,9 @@ export function generateBTreeSearchTrace(items: number[], target: number): Searc
     state.pointers.mid = undefined;
     addStep('descend');
     node = nextNode;
+    if (node && !(state.visitedTreeNodeIds ?? []).includes(node.id)) {
+      state.visitedTreeNodeIds = [...(state.visitedTreeNodeIds ?? []), node.id];
+    }
   }
 
   state.activeTreeNodeId = null;

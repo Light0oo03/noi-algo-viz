@@ -5,6 +5,7 @@
         <span class="legend-item"><i class="legend-line active"></i>当前路由边</span>
         <span class="legend-item"><i class="legend-line visited"></i>已走过路径</span>
         <span v-if="props.algoKey === 'b-plus-tree-search'" class="legend-item"><i class="legend-line leaf"></i>B+ 叶子链</span>
+        <span class="legend-item"><i class="legend-node visited"></i>已访问节点</span>
       </div>
       <svg
         v-if="treeSvg.width > 0 && treeSvg.height > 0"
@@ -59,7 +60,14 @@
         <div
           v-for="node in level.nodes"
           :key="node.id"
-          :class="['tree-node', { active: state.activeTreeNodeId === node.id, leaf: node.leaf }]"
+          :class="[
+            'tree-node',
+            {
+              active: state.activeTreeNodeId === node.id,
+              leaf: node.leaf,
+              visited: isVisitedTreeNode(node.id),
+            },
+          ]"
           :ref="(el) => setTreeNodeRef(node.id, el as Element | null)"
         >
           <div class="tree-node-head">
@@ -256,6 +264,10 @@ function isVisitedTreeEdge(from: string, to: string): boolean {
   return list.some((edge) => edge.from === from && edge.to === to);
 }
 
+function isVisitedTreeNode(nodeId: string): boolean {
+  return (props.state.visitedTreeNodeIds ?? []).includes(nodeId);
+}
+
 function edgeLabelWidth(childIndex: number): number {
   const text = `child ${childIndex}`;
   return Math.max(56, text.length * 7 + 14);
@@ -404,6 +416,19 @@ function pointerStyle(index: number): Record<string, string> {
   border-top-style: dashed;
 }
 
+.legend-node {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid #94a3b8;
+  display: inline-block;
+}
+
+.legend-node.visited {
+  border-color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.16);
+}
+
 .tree-links {
   position: absolute;
   inset: 0;
@@ -466,6 +491,11 @@ function pointerStyle(index: number): Record<string, string> {
 .tree-node.active {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.tree-node.visited:not(.active) {
+  border-color: #0ea5e9;
+  background: #f0f9ff;
 }
 
 .tree-node.leaf {

@@ -117,6 +117,7 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
   state.activeTreeEdge = null;
   state.activeChildIndex = null;
   state.visitedTreeEdges = [];
+  state.visitedTreeNodeIds = [root.id];
   state.note = `🚀 开始 B+ 树查找（去重排序后 ${keys.length} 个键）`;
   state.routeHint = '规则：内部节点按分隔键路由，叶子节点顺序扫描';
   state.highlightLines = B_PLUS_TREE_SEARCH_CODE_LINES.init;
@@ -125,6 +126,9 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
   let node: BPlusNode | null = root;
   while (node && !node.leaf) {
     state.activeTreeNodeId = node.id;
+    if (!(state.visitedTreeNodeIds ?? []).includes(node.id)) {
+      state.visitedTreeNodeIds = [...(state.visitedTreeNodeIds ?? []), node.id];
+    }
     state.pointers.left = node.start;
     state.pointers.right = node.end;
     state.highlightLines = B_PLUS_TREE_SEARCH_CODE_LINES.routeLoop;
@@ -167,6 +171,9 @@ export function generateBPlusTreeSearchTrace(items: number[], target: number): S
     }
     addStep('descend');
     node = nextNode;
+    if (node && !(state.visitedTreeNodeIds ?? []).includes(node.id)) {
+      state.visitedTreeNodeIds = [...(state.visitedTreeNodeIds ?? []), node.id];
+    }
     state.pointers.mid = undefined;
   }
 

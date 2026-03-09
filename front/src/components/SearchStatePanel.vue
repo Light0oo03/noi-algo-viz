@@ -24,7 +24,18 @@
       <div class="meta">rule: {{ state.routeHint || '-' }}</div>
       <div class="meta">visited-nodes: {{ visitedNodeCount }}</div>
       <div class="meta">visited-edges: {{ visitedEdgeCount }}</div>
-      <div class="meta mono">node-path: {{ visitedNodePathText }}</div>
+      <div class="path-head">
+        <span class="meta">node-path:</span>
+        <div class="path-actions" v-if="hasNodePath">
+          <button type="button" class="path-btn" @click="togglePathExpanded">
+            {{ isPathExpanded ? '收起' : '展开' }}
+          </button>
+          <button type="button" class="path-btn" @click="copyNodePath">
+            {{ copyButtonText }}
+          </button>
+        </div>
+      </div>
+      <div class="meta mono node-path" :class="{ collapsed: !isPathExpanded }">{{ visitedNodePathText }}</div>
     </div>
 
     <div class="section">
@@ -35,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { SearchVizState } from '../core/search/types';
 
 const props = defineProps<{
@@ -56,6 +67,32 @@ const visitedNodePathText = computed(() => {
   const ids = props.state.visitedTreeNodeIds ?? [];
   return ids.length > 0 ? ids.join(' -> ') : '-';
 });
+const hasNodePath = computed(() => (props.state.visitedTreeNodeIds?.length ?? 0) > 0);
+const isPathExpanded = ref(false);
+const copyButtonText = ref('复制');
+
+watch(
+  () => visitedNodePathText.value,
+  (next) => {
+    isPathExpanded.value = next.length <= 48;
+    copyButtonText.value = '复制';
+  },
+  { immediate: true }
+);
+
+function togglePathExpanded() {
+  isPathExpanded.value = !isPathExpanded.value;
+}
+
+async function copyNodePath() {
+  if (!hasNodePath.value) return;
+  try {
+    await navigator.clipboard.writeText(visitedNodePathText.value);
+    copyButtonText.value = '已复制';
+  } catch {
+    copyButtonText.value = '复制失败';
+  }
+}
 
 function pointerText(value: number | undefined): string {
   return value === undefined ? '-' : String(value);
@@ -98,8 +135,43 @@ function pointerText(value: number | undefined): string {
   color: var(--muted-2);
 }
 
+.path-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.path-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.path-btn {
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #065f46;
+  background: rgba(236, 253, 245, 0.9);
+  cursor: pointer;
+}
+
+.path-btn:hover {
+  background: rgba(209, 250, 229, 0.9);
+}
+
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   word-break: break-all;
+}
+
+.node-path.collapsed {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 </style>

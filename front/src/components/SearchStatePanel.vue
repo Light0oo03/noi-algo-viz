@@ -18,6 +18,12 @@
       <div class="meta">index: {{ pointerText(state.pointers.index) }}</div>
     </div>
 
+    <div v-if="state.treeNodes?.length" class="section">
+      <div class="section-title">🧭 树路由</div>
+      <div class="meta">active-node: {{ activeTreeNodeText }}</div>
+      <div class="meta">rule: {{ state.routeHint || '-' }}</div>
+    </div>
+
     <div class="section">
       <div class="section-title">✅ 结果</div>
       <div class="meta">{{ state.resultIndex === null ? '未找到' : `找到，索引 ${state.resultIndex}` }}</div>
@@ -26,12 +32,20 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { SearchVizState } from '../core/search/types';
 
-defineProps<{
+const props = defineProps<{
   note: string;
   state: SearchVizState;
 }>();
+
+const activeTreeNodeText = computed(() => {
+  if (!props.state.treeNodes?.length || !props.state.activeTreeNodeId) return '-';
+  const node = props.state.treeNodes.find((item) => item.id === props.state.activeTreeNodeId);
+  if (!node) return '-';
+  return `${node.id} keys=[${node.keys.join(', ')}]`;
+});
 
 function pointerText(value: number | undefined): string {
   return value === undefined ? '-' : String(value);

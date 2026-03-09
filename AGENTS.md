@@ -36,6 +36,8 @@ There is no unified automated test suite yet. Validate changes with:
 ## Commit & Pull Request Guidelines
 - Follow the existing commit pattern: short, imperative summaries, usually prefixed with type tags such as `feat:`, `refactor:`, `ci:`.
 - Keep commits scoped (frontend vs backend vs infra) and avoid mixing unrelated changes.
+- Agent execution rule: when a coding task is completed to a clean, committable scope, the agent should commit automatically without waiting for an extra "please commit".
+- Agent execution rule: after auto-commit, the agent should also run `git push` by default. If push fails due to auth/network/remote policy, report the exact error and next action.
 - PRs should include:
   - clear change summary and motivation,
   - linked issue/task,

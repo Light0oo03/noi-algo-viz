@@ -81,7 +81,7 @@
           @note="setTreeNote"
           @disabled-action="onDisabledTreeAction"
         />
-        <SearchCanvas v-else-if="isSearchAlgo" :state="searchVizState" />
+        <SearchCanvas v-else-if="isSearchAlgo" :state="searchVizState" :algo-key="selectedAlgo" />
         <SortCanvas v-else-if="isSortAlgo" :state="sortVizState" />
         <div ref="floatingPanelRef" class="floating-panel" :style="floatingPanelStyle">
           <div class="floating-panel-drag-handle" @mousedown="onFloatingPanelDragStart">拖动说明面板</div>
@@ -393,6 +393,8 @@ import { generateExponentialSearchTrace } from '../core/search/exponential';
 import { generateFibonacciSearchTrace } from '../core/search/fibonacci';
 import { generateHashOpenSearchTrace } from '../core/search/hash-open';
 import { generateHashChainSearchTrace } from '../core/search/hash-chain';
+import { generateBTreeSearchTrace } from '../core/search/b-tree';
+import { generateBPlusTreeSearchTrace } from '../core/search/b-plus-tree';
 import { LINEAR_SEARCH_CODE_JS } from '../core/search/linear-code';
 import { BINARY_SEARCH_CODE_JS } from '../core/search/binary-code';
 import { JUMP_SEARCH_CODE_JS } from '../core/search/jump-code';
@@ -401,12 +403,15 @@ import { EXPONENTIAL_SEARCH_CODE_JS } from '../core/search/exponential-code';
 import { FIBONACCI_SEARCH_CODE_JS } from '../core/search/fibonacci-code';
 import { HASH_OPEN_SEARCH_CODE_JS } from '../core/search/hash-open-code';
 import { HASH_CHAIN_SEARCH_CODE_JS } from '../core/search/hash-chain-code';
+import { B_TREE_SEARCH_CODE_JS } from '../core/search/b-tree-code';
+import { B_PLUS_TREE_SEARCH_CODE_JS } from '../core/search/b-plus-tree-code';
 import { SortTracePlayer, type SortPlayerStatus } from '../core/sort/TracePlayer';
 import type { SortVizState } from '../core/sort/types';
 import { createInitialSortVizState } from '../core/sort/types';
 import { generateBubbleSortTrace } from '../core/sort/bubble';
 import { generateSelectionSortTrace } from '../core/sort/selection';
 import { generateInsertionSortTrace } from '../core/sort/insertion';
+import { generateBinaryInsertionSortTrace } from '../core/sort/binary-insertion';
 import { generateQuickSortTrace } from '../core/sort/quick';
 import { generateMergeSortTrace } from '../core/sort/merge';
 import { generateHeapSortTrace } from '../core/sort/heap';
@@ -416,6 +421,7 @@ import { generateRadixSortTrace } from '../core/sort/radix';
 import { BUBBLE_SORT_CODE_JS } from '../core/sort/bubble-code';
 import { SELECTION_SORT_CODE_JS } from '../core/sort/selection-code';
 import { INSERTION_SORT_CODE_JS } from '../core/sort/insertion-code';
+import { BINARY_INSERTION_SORT_CODE_JS } from '../core/sort/binary-insertion-code';
 import { QUICK_SORT_CODE_JS } from '../core/sort/quick-code';
 import { MERGE_SORT_CODE_JS } from '../core/sort/merge-code';
 import { HEAP_SORT_CODE_JS } from '../core/sort/heap-code';
@@ -683,12 +689,15 @@ const isSearchAlgo = computed(() => (
   || selectedAlgo.value === 'fibonacci-search'
   || selectedAlgo.value === 'hash-open-search'
   || selectedAlgo.value === 'hash-chain-search'
+  || selectedAlgo.value === 'b-tree-search'
+  || selectedAlgo.value === 'b-plus-tree-search'
 ));
 
 const isSortAlgo = computed(() => (
   selectedAlgo.value === 'bubble-sort'
   || selectedAlgo.value === 'selection-sort'
   || selectedAlgo.value === 'insertion-sort'
+  || selectedAlgo.value === 'binary-insertion-sort'
   || selectedAlgo.value === 'quick-sort'
   || selectedAlgo.value === 'merge-sort'
   || selectedAlgo.value === 'heap-sort'
@@ -835,12 +844,18 @@ const currentAlgoCode = computed(() => {
       return HASH_OPEN_SEARCH_CODE_JS;
     case 'hash-chain-search':
       return HASH_CHAIN_SEARCH_CODE_JS;
+    case 'b-tree-search':
+      return B_TREE_SEARCH_CODE_JS;
+    case 'b-plus-tree-search':
+      return B_PLUS_TREE_SEARCH_CODE_JS;
     case 'bubble-sort':
       return BUBBLE_SORT_CODE_JS;
     case 'selection-sort':
       return SELECTION_SORT_CODE_JS;
     case 'insertion-sort':
       return INSERTION_SORT_CODE_JS;
+    case 'binary-insertion-sort':
+      return BINARY_INSERTION_SORT_CODE_JS;
     case 'quick-sort':
       return QUICK_SORT_CODE_JS;
     case 'merge-sort':
@@ -928,12 +943,18 @@ const currentAlgoTitle = computed(() => {
       return '哈希查找（开放定址）';
     case 'hash-chain-search':
       return '哈希查找（拉链法）';
+    case 'b-tree-search':
+      return 'B 树查找';
+    case 'b-plus-tree-search':
+      return 'B+ 树查找';
     case 'bubble-sort':
       return '冒泡排序';
     case 'selection-sort':
       return '选择排序';
     case 'insertion-sort':
       return '插入排序';
+    case 'binary-insertion-sort':
+      return '折半插入排序';
     case 'quick-sort':
       return '快速排序';
     case 'merge-sort':
@@ -1021,12 +1042,18 @@ const currentAlgoName = computed(() => {
       return '哈希查找（开放定址）';
     case 'hash-chain-search':
       return '哈希查找（拉链法）';
+    case 'b-tree-search':
+      return 'B 树查找';
+    case 'b-plus-tree-search':
+      return 'B+ 树查找';
     case 'bubble-sort':
       return '冒泡排序';
     case 'selection-sort':
       return '选择排序';
     case 'insertion-sort':
       return '插入排序';
+    case 'binary-insertion-sort':
+      return '折半插入排序';
     case 'quick-sort':
       return '快速排序';
     case 'merge-sort':
@@ -1114,12 +1141,18 @@ const currentAlgoDesc = computed(() => {
       return `当前：查找 / 哈希查找（开放定址，target=${searchTarget.value}）`;
     case 'hash-chain-search':
       return `当前：查找 / 哈希查找（拉链法，target=${searchTarget.value}）`;
+    case 'b-tree-search':
+      return `当前：查找 / B 树查找（自动去重排序，target=${searchTarget.value}）`;
+    case 'b-plus-tree-search':
+      return `当前：查找 / B+ 树查找（自动去重排序，target=${searchTarget.value}）`;
     case 'bubble-sort':
       return '当前：排序 / 冒泡排序';
     case 'selection-sort':
       return '当前：排序 / 选择排序';
     case 'insertion-sort':
       return '当前：排序 / 插入排序';
+    case 'binary-insertion-sort':
+      return '当前：排序 / 折半插入排序';
     case 'quick-sort':
       return '当前：排序 / 快速排序';
     case 'merge-sort':
@@ -2124,6 +2157,14 @@ function generateTrace() {
       searchPlayer.load(generateHashChainSearchTrace(items, searchTarget.value));
       return true;
     }
+    if (selectedAlgo.value === 'b-tree-search') {
+      searchPlayer.load(generateBTreeSearchTrace(items, searchTarget.value));
+      return true;
+    }
+    if (selectedAlgo.value === 'b-plus-tree-search') {
+      searchPlayer.load(generateBPlusTreeSearchTrace(items, searchTarget.value));
+      return true;
+    }
   }
 
   if (isSortAlgo.value) {
@@ -2145,6 +2186,10 @@ function generateTrace() {
     }
     if (selectedAlgo.value === 'insertion-sort') {
       sortPlayer.load(generateInsertionSortTrace(values));
+      return true;
+    }
+    if (selectedAlgo.value === 'binary-insertion-sort') {
+      sortPlayer.load(generateBinaryInsertionSortTrace(values));
       return true;
     }
     if (selectedAlgo.value === 'quick-sort') {

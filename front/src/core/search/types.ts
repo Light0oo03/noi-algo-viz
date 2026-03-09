@@ -12,6 +12,16 @@ export interface SearchPointers {
   mid?: number;
 }
 
+export interface SearchTreeNodeView {
+  id: string;
+  keys: number[];
+  depth: number;
+  order: number;
+  leaf: boolean;
+  start: number;
+  end: number;
+}
+
 export interface SearchVizState {
   items: SearchItem[];
   itemStates: Record<number, SearchItemState>;
@@ -19,7 +29,13 @@ export interface SearchVizState {
   target: number;
   resultIndex: number | null;
   note: string;
+  routeHint?: string;
   highlightLines?: [number, number];
+  treeNodes?: SearchTreeNodeView[];
+  activeTreeNodeId?: string | null;
+  activeTreeEdge?: { from: string; to: string } | null;
+  activeChildIndex?: number | null;
+  visitedTreeEdges?: Array<{ from: string; to: string }>;
 }
 
 export interface SearchTraceStep {
@@ -45,6 +61,12 @@ export function createInitialSearchVizState(items: number[], target: number): Se
     target,
     resultIndex: null,
     note: '准备开始查找... ',
+    routeHint: undefined,
+    treeNodes: undefined,
+    activeTreeNodeId: null,
+    activeTreeEdge: null,
+    activeChildIndex: null,
+    visitedTreeEdges: [],
   };
 }
 
@@ -56,6 +78,20 @@ export function cloneSearchVizState(state: SearchVizState): SearchVizState {
     target: state.target,
     resultIndex: state.resultIndex,
     note: state.note,
+    routeHint: state.routeHint,
     highlightLines: state.highlightLines ? [...state.highlightLines] as [number, number] : undefined,
+    treeNodes: state.treeNodes?.map((node) => ({
+      id: node.id,
+      keys: [...node.keys],
+      depth: node.depth,
+      order: node.order,
+      leaf: node.leaf,
+      start: node.start,
+      end: node.end,
+    })),
+    activeTreeNodeId: state.activeTreeNodeId ?? null,
+    activeTreeEdge: state.activeTreeEdge ? { ...state.activeTreeEdge } : null,
+    activeChildIndex: state.activeChildIndex ?? null,
+    visitedTreeEdges: state.visitedTreeEdges?.map((edge) => ({ ...edge })) ?? [],
   };
 }

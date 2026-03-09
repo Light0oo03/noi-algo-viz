@@ -100,8 +100,9 @@ async function copyText(text: string): Promise<boolean> {
     }
   }
 
+  let textarea: HTMLTextAreaElement | null = null;
   try {
-    const textarea = document.createElement('textarea');
+    textarea = document.createElement('textarea');
     textarea.value = text;
     textarea.setAttribute('readonly', 'true');
     textarea.style.position = 'fixed';
@@ -109,11 +110,13 @@ async function copyText(text: string): Promise<boolean> {
     textarea.style.pointerEvents = 'none';
     document.body.appendChild(textarea);
     textarea.select();
-    const success = document.execCommand('copy');
-    document.body.removeChild(textarea);
-    return success;
+    return document.execCommand('copy');
   } catch {
     return false;
+  } finally {
+    if (textarea?.parentNode) {
+      textarea.parentNode.removeChild(textarea);
+    }
   }
 }
 

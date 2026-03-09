@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { SearchVizState } from '../core/search/types';
 
 const props = defineProps<{
@@ -89,6 +89,7 @@ const isPathExpanded = ref(false);
 const copyButtonText = ref('复制');
 const showManualCopyFallback = ref(false);
 const manualCopyTextareaRef = ref<HTMLTextAreaElement | null>(null);
+let copyTextTimer: number | null = null;
 const copyShortcutHint = computed(() => (
   typeof navigator !== 'undefined' && /mac/i.test(navigator.platform) ? 'Command + C' : 'Ctrl + C'
 ));
@@ -97,7 +98,7 @@ watch(
   () => visitedNodePathText.value,
   (path) => {
     isPathExpanded.value = path.length <= 48;
-    copyButtonText.value = '复制';
+    resetCopyButtonText();
     showManualCopyFallback.value = false;
   },
   { immediate: true }
@@ -110,7 +111,7 @@ function togglePathExpanded() {
 async function copyNodePath() {
   if (!hasNodePath.value) return;
   const ok = await copyText(visitedNodePathText.value);
-  copyButtonText.value = ok ? '已复制' : '复制失败，请手动复制';
+  setCopyButtonFeedback(ok ? '已复制' : '复制失败，请手动复制');
   showManualCopyFallback.value = !ok;
   if (!ok) {
     requestAnimationFrame(() => selectManualCopyText());
@@ -163,12 +164,39 @@ function selectManualCopyText() {
 
 async function retryCopy() {
   const ok = await copyText(visitedNodePathText.value);
-  copyButtonText.value = ok ? '已复制' : '复制失败，请手动复制';
+  setCopyButtonFeedback(ok ? '已复制' : '复制失败，请手动复制');
   showManualCopyFallback.value = !ok;
   if (!ok) {
     requestAnimationFrame(() => selectManualCopyText());
   }
 }
+
+function setCopyButtonFeedback(text: string) {
+  copyButtonText.value = text;
+  if (copyTextTimer !== null) {
+    window.clearTimeout(copyTextTimer);
+    copyTextTimer = null;
+  }
+  if (text !== '复制') {
+    copyTextTimer = window.setTimeout(() => {
+      resetCopyButtonText();
+    }, 2200);
+  }
+}
+
+function resetCopyButtonText() {
+  if (copyTextTimer !== null) {
+    window.clearTimeout(copyTextTimer);
+    copyTextTimer = null;
+  }
+  copyButtonText.value = '复制';
+}
+
+onBeforeUnmount(() => {
+  if (copyTextTimer !== null) {
+    window.clearTimeout(copyTextTimer);
+  }
+});
 </script>
 
 <style scoped>

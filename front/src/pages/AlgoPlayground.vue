@@ -1,9 +1,12 @@
 <template>
-  <el-container class="page">
+  <el-container :class="['page', { 'immersive-mode': immersiveMode }]">
     <el-header class="header">
       <div class="title-row">
         <div class="title">NOI 算法可视化学习平台（MVP）</div>
         <el-button class="ghost-btn" size="small" plain @click="goHome">返回首页</el-button>
+        <el-button class="ghost-btn" size="small" plain @click="toggleImmersiveMode">
+          {{ immersiveMode ? '退出沉浸' : '沉浸模式' }}
+        </el-button>
       </div>
       <div class="sub">{{ currentAlgoDesc }}</div>
       <div class="auth">
@@ -55,6 +58,16 @@
       </el-aside>
 
       <el-main ref="centerRef" class="center">
+        <el-button
+          v-if="immersiveMode"
+          class="immersive-exit-btn"
+          size="small"
+          type="primary"
+          plain
+          @click="toggleImmersiveMode"
+        >
+          退出沉浸（Esc）
+        </el-button>
         <GraphCanvas
           v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo && !isTreeAlgo && !isSearchAlgo && !isSortAlgo"
           :graph="graph"
@@ -2710,6 +2723,7 @@ watch(graphMode, (mode) => {
 
 const centerRef = ref<any>(null);
 const floatingPanelRef = ref<HTMLElement | null>(null);
+const immersiveMode = ref(false);
 const floatingPanelPos = reactive({
   x: 0,
   y: 0,
@@ -2813,6 +2827,11 @@ function isEditingText(): boolean {
 }
 
 function onKeyDown(evt: KeyboardEvent) {
+  if (evt.key === 'Escape' && immersiveMode.value) {
+    immersiveMode.value = false;
+    evt.preventDefault();
+    return;
+  }
   if (isEditingText()) return;
   if (graphPlayerStatus.value === 'playing') return;
   if (isListAlgo.value || isStackAlgo.value || isQueueAlgo.value || isTreeAlgo.value || isSearchAlgo.value || isSortAlgo.value) return;
@@ -2839,6 +2858,15 @@ function onKeyDown(evt: KeyboardEvent) {
     vizState.note = ok ? '已取消撤回。' : '没有可取消撤回的操作。';
   }
 }
+
+function toggleImmersiveMode() {
+  immersiveMode.value = !immersiveMode.value;
+}
+
+watch(immersiveMode, async () => {
+  await nextTick();
+  onFloatingPanelWindowResize();
+});
 
 onMounted(async () => {
   await nextTick();
@@ -3185,6 +3213,13 @@ watch(
   padding: 12px;
   overflow: hidden;
 }
+
+.immersive-exit-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 12;
+}
 .floating-panel {
   position: absolute;
   bottom: 20px;
@@ -3263,5 +3298,20 @@ watch(
 }
 :deep(.el-sub-menu__title) {
   font-weight: 600;
+}
+
+.page.immersive-mode .header,
+.page.immersive-mode .side-menu,
+.page.immersive-mode .right,
+.page.immersive-mode .footer {
+  display: none;
+}
+
+.page.immersive-mode .main {
+  height: 100vh;
+}
+
+.page.immersive-mode .center {
+  padding: 8px;
 }
 </style>

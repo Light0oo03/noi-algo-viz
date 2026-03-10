@@ -33,6 +33,14 @@ There is no unified automated test suite yet. Validate changes with:
 - Manual scenario checks in `TEST_GUIDE.md` (especially `/playground` flows and animation controls).
 - Record significant verification in `record/YYYY-MM-DD.md`.
 
+## Visualization-First Rule
+- 说明面板（状态面板、提示框）只保留轻量信息：当前步骤摘要、少量关键指针、简短结果。
+- 不要把大段解释、长列表、深层状态结构塞进说明面板，避免用户需要拖动或滚动说明框才能理解核心过程。
+- 只要某类信息具备时序性、空间关系或层级关系，并且可以图形化表达，就应优先直接在画布中可视化。
+- 典型例子：
+  - 递归栈、搜索路径、调用链、区间分治关系，应优先在主画布中展示。
+  - 说明面板只负责补充一句话说明，不承担主视觉表达。
+
 ## Commit & Pull Request Guidelines
 - Follow the existing commit pattern: short, imperative summaries, usually prefixed with type tags such as `feat:`, `refactor:`, `ci:`.
 - Keep commits scoped (frontend vs backend vs infra) and avoid mixing unrelated changes.

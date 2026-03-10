@@ -89,30 +89,44 @@ export function generateQuickSortTrace(values: number[]): SortTrace {
   }
 
   function quick(left: number, right: number) {
-    if (left > right) return;
+    state.callStack.push({ label: 'quick', left, right, phase: 'enter' });
+    if (left > right) {
+      state.callStack.pop();
+      return;
+    }
     if (left === right) {
+      state.callStack[state.callStack.length - 1]!.phase = 'base';
       state.itemStates[state.items[left]!.id] = 'sorted';
       state.highlightLines = QUICK_SORT_CODE_LINES.base;
       state.note = `单元素区间 [${left}, ${right}]，天然有序`;
       addStep('base-single');
+      state.callStack.pop();
       return;
     }
 
+    state.callStack[state.callStack.length - 1]!.phase = 'enter';
     state.highlightLines = QUICK_SORT_CODE_LINES.recurseLeft;
     state.note = `递归处理区间 [${left}, ${right}]`;
     addStep('recurse');
 
     const p = partition(left, right);
 
+    state.callStack[state.callStack.length - 1]!.phase = 'left';
     state.highlightLines = QUICK_SORT_CODE_LINES.recurseLeft;
     state.note = `递归左区间 [${left}, ${p - 1}]`;
     addStep('left');
     quick(left, p - 1);
 
+    state.callStack[state.callStack.length - 1]!.phase = 'right';
     state.highlightLines = QUICK_SORT_CODE_LINES.recurseRight;
     state.note = `递归右区间 [${p + 1}, ${right}]`;
     addStep('right');
     quick(p + 1, right);
+
+    state.callStack[state.callStack.length - 1]!.phase = 'done';
+    state.note = `区间 [${left}, ${right}] 递归完成`;
+    addStep('return');
+    state.callStack.pop();
   }
 
   if (state.items.length > 0) {

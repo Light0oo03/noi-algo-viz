@@ -97,7 +97,12 @@
           <StackStatePanel v-else-if="isStackAlgo" :note="stackVizState.note" :state="stackVizState" />
           <QueueStatePanel v-else-if="isQueueAlgo" :note="queueVizState.note" :state="queueVizState" />
           <TreeStatePanel v-else-if="isTreeAlgo" :note="treeVizState.note" :state="treeVizState" />
-          <SearchStatePanel v-else-if="isSearchAlgo" :note="searchVizState.note" :state="searchVizState" />
+          <SearchStatePanel
+            v-else-if="isSearchAlgo"
+            :note="searchVizState.note"
+            :state="searchVizState"
+            :algo-key="selectedAlgo"
+          />
           <SortStatePanel v-else-if="isSortAlgo" :note="sortVizState.note" :state="sortVizState" />
         </div>
       </el-main>

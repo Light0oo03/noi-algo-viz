@@ -26,11 +26,11 @@
       <div class="meta">visited-edges: {{ visitedEdgeCount }}</div>
       <div class="path-head">
         <span class="meta">node-path:</span>
-        <div v-if="hasNodePath" class="path-actions">
-          <button type="button" class="path-btn" @click="togglePathExpanded">
+        <div class="path-actions">
+          <button type="button" class="path-btn" :disabled="!hasNodePath" @click="togglePathExpanded">
             {{ isPathExpanded ? '收起' : '展开' }}
           </button>
-          <button type="button" class="path-btn" @click="copyNodePath">
+          <button type="button" class="path-btn" :disabled="!hasNodePath" @click="copyNodePath">
             {{ copyButtonText }}
           </button>
         </div>
@@ -72,6 +72,7 @@ import type { SearchVizState } from '../core/search/types';
 const props = defineProps<{
   note: string;
   state: SearchVizState;
+  algoKey?: string;
 }>();
 
 const activeTreeNodeText = computed(() => {
@@ -88,7 +89,12 @@ const visitedNodePathText = computed(() => {
   return ids.length > 0 ? ids.join(' -> ') : '-';
 });
 const hasNodePath = computed(() => (props.state.visitedTreeNodeIds?.length ?? 0) > 0);
-const showTreeRouteSection = computed(() => hasNodePath.value || (props.state.treeNodes?.length ?? 0) > 0);
+const isTreeSearchAlgo = computed(() => props.algoKey === 'b-tree-search' || props.algoKey === 'b-plus-tree-search');
+const showTreeRouteSection = computed(() => (
+  isTreeSearchAlgo.value
+  || hasNodePath.value
+  || (props.state.treeNodes?.length ?? 0) > 0
+));
 const isPathExpanded = ref(false);
 const copyButtonText = ref('复制');
 const selectButtonText = ref('全选文本');
@@ -299,6 +305,11 @@ onBeforeUnmount(() => {
 
 .path-btn:hover {
   background: rgba(209, 250, 229, 0.9);
+}
+
+.path-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .mono {

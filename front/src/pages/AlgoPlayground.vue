@@ -1480,6 +1480,7 @@ function syncSortVizState(state: SortVizState) {
   sortVizState.items = state.items;
   sortVizState.itemStates = state.itemStates;
   sortVizState.pointers = state.pointers;
+  sortVizState.callStack = state.callStack;
   sortVizState.note = state.note;
   sortVizState.highlightLines = state.highlightLines;
 }

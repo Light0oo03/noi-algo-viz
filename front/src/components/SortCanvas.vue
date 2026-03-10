@@ -221,7 +221,9 @@ function phaseText(phase: SortVizState['callStack'][number]['phase']): string {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  overflow: auto;
+  padding-top: 6px;
+  overflow-x: auto;
+  overflow-y: visible;
 }
 
 .stack-item {

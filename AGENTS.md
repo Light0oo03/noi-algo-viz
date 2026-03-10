@@ -39,8 +39,6 @@ There is no unified automated test suite yet. Validate changes with:
 - Agent execution rule: when a coding task is completed to a clean, committable scope, the agent should commit automatically without waiting for an extra "please commit".
 - Agent execution rule: after auto-commit, the agent should also run `git push` by default. If push fails due to auth/network/remote policy, report the exact error and next action.
 - Agent workflow rule (must): 每完成一个“可测试小模块”，必须先给出明确验收步骤，再进入下一模块开发。
-- Agent workflow rule (must): 每次向 PR 分支 push 后，必须触发 Codex 审核（`@codex review`），并等待审核结果返回后再继续功能迭代。
-- Agent workflow rule (must): 若 Codex 提出修改建议，必须先修复并 push，再次触发审核，直到无阻塞性建议。
 - Agent workflow rule (must): 审核通过后，涉及 `merge`/删除分支操作前，必须先征求用户同意。
 - Agent workflow rule (must): 每次修复 bug 或实现新功能，都必须记录到 `record/YYYY-MM-DD.md`。
 - PRs should include:
@@ -48,6 +46,25 @@ There is no unified automated test suite yet. Validate changes with:
   - linked issue/task,
   - screenshots or short recordings for UI changes,
   - verification notes (manual steps + build results).
+
+## Dual-Agent Local Review Workflow (must)
+- 目标：采用“开发 Agent + 评审 Agent”本地闭环，不再强依赖 GitHub `@codex review` 配额。
+- 角色分工：
+  - 开发 Agent：实现需求、提交代码、推送分支、根据评审意见修复。
+  - 评审 Agent：仅做代码审查，不直接改业务代码。
+- 评审通道：统一使用 `record/review/current.md` 作为单一事实来源（Single Source of Truth）。
+- 状态流转：
+  - 开发 Agent 完成一个可测试小模块后，提交并推送，然后停止在“等待评审”状态。
+  - 评审 Agent 在 `record/review/current.md` 写入审查结论：
+    - `状态: OPEN` 表示有待修复问题。
+    - `状态: PASS` 表示当前模块可继续下一步开发。
+  - 开发 Agent 读取 `record/review/current.md` 中所有 `OPEN` 问题并修复，提交后再次等待评审。
+- 问题记录规范（评审 Agent 必须遵守）：
+  - 每条问题需包含：`问题ID`、`级别(P0/P1/P2)`、`位置(文件:行)`、`问题描述`、`修改建议`、`复审结论`。
+- 开发准入门槛：
+  - 仅当 `record/review/current.md` 最新结论为 `状态: PASS`，开发 Agent 才能进入下一个功能模块。
+- 兼容规则：
+  - 若后续恢复 GitHub Codex 审核，可额外触发 `@codex review` 作为补充，不替代本地双 Agent 审核流程。
 
 ## Persistence Rule for Visual Editors
 - Any user-editable visualization structure (for example graph/tree shape edits) must persist both locally and on backend.

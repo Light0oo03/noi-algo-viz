@@ -18,7 +18,7 @@
       <div class="meta">index: {{ pointerText(state.pointers.index) }}</div>
     </div>
 
-    <div v-if="state.treeNodes?.length" class="section">
+    <div v-if="showTreeRouteSection" class="section">
       <div class="section-title">🧭 树路由</div>
       <div class="meta">active-node: {{ activeTreeNodeText }}</div>
       <div class="meta">rule: {{ state.routeHint || '-' }}</div>
@@ -88,6 +88,7 @@ const visitedNodePathText = computed(() => {
   return ids.length > 0 ? ids.join(' -> ') : '-';
 });
 const hasNodePath = computed(() => (props.state.visitedTreeNodeIds?.length ?? 0) > 0);
+const showTreeRouteSection = computed(() => hasNodePath.value || (props.state.treeNodes?.length ?? 0) > 0);
 const isPathExpanded = ref(false);
 const copyButtonText = ref('复制');
 const selectButtonText = ref('全选文本');

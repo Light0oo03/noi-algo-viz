@@ -22,7 +22,7 @@
 - 复审结论：OPEN
 
 ## 开发Agent修复记录
-- 提交哈希：待本轮提交后回填
+- 提交哈希：`1f32546`
 - 修复说明：已在 `front/src/pages/AlgoPlayground.vue` 的 `syncSortVizState` 中补齐 `callStack` 同步，确保排序 trace 的递归栈帧会进入响应式 `sortVizState`。
 - 自测结果：`pnpm -C front build` 通过；刷新 `/playground` 后，快速排序与归并排序说明面板会显示“🧠 递归栈”区块。
 

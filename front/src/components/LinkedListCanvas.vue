@@ -3,31 +3,33 @@
     <div v-for="list in state.lists" :key="list.id" class="list-row">
       <div class="list-title">{{ list.label }}</div>
       <div class="list-track">
-        <template v-for="(node, index) in orderedNodes(list)" :key="node.id">
-          <div class="node-wrap" :ref="el => setNodeRef(list.id, node.id, el)">
-            <div class="pointer-tags">
-              <span
-                v-for="name in pointerLabels(list.id, node.id)"
-                :key="name"
-                :class="['pointer-tag', `pointer-${name}`]"
-              >
-                {{ name }}
-              </span>
+        <div v-for="segment in listSegments(list)" :key="segment.key" class="list-segment">
+          <template v-for="(node, index) in segment.nodes" :key="node.id">
+            <div class="node-wrap" :ref="el => setNodeRef(list.id, node.id, el)">
+              <div class="pointer-tags">
+                <span
+                  v-for="name in pointerLabels(list.id, node.id)"
+                  :key="name"
+                  :class="['pointer-tag', `pointer-${name}`]"
+                >
+                  {{ name }}
+                </span>
+              </div>
+              <div :class="['node', nodeStateClass(list.id, node.id)]">
+                <div class="node-value">{{ node.value }}</div>
+                <div class="node-id">#{{ node.id }}</div>
+                <div v-if="node.label" class="node-label">{{ node.label }}</div>
+              </div>
             </div>
-            <div :class="['node', nodeStateClass(list.id, node.id)]">
-              <div class="node-value">{{ node.value }}</div>
-              <div class="node-id">#{{ node.id }}</div>
-              <div v-if="node.label" class="node-label">{{ node.label }}</div>
+            <div v-if="index < segment.nodes.length - 1" :class="['arrow', edgeClass(list, node.id)]">
+              <span class="arrow-line">→</span>
             </div>
+          </template>
+          <div v-if="segment.tailType === 'null'" class="null-node">null</div>
+          <div v-else-if="segment.tailTarget != null" :class="['cycle-tag', segment.tailType === 'link' ? 'link-tag' : '']">
+            ↩ 指向 #{{ segment.tailTarget }}
           </div>
-          <div v-if="index < orderedNodes(list).length - 1" :class="['arrow', edgeClass(list, node.id)]">
-            <span class="arrow-line">→</span>
-          </div>
-        </template>
-        <div v-if="cycleTarget(list) != null" class="cycle-tag">
-          ↩ 指回 #{{ cycleTarget(list) }}
         </div>
-        <div v-else class="null-node">null</div>
       </div>
     </div>
   </div>
@@ -43,6 +45,14 @@ const props = defineProps<{
 }>();
 
 const nodeRefs = ref<Map<string, HTMLElement>>(new Map());
+const POINTER_PRIORITY = ['prev', 'curr', 'next', 'slow', 'fast', 'p1', 'p2', 'tail'] as const;
+
+type ListSegment = {
+  key: string;
+  nodes: ListNode[];
+  tailType: 'null' | 'link' | 'cycle';
+  tailTarget: number | null;
+};
 
 function setNodeRef(listId: string, nodeId: number, el: any) {
   if (el) {
@@ -64,17 +74,119 @@ function orderedNodes(list: ListView): ListNode[] {
   return res;
 }
 
-function cycleTarget(list: ListView): number | null {
-  const visited = new Set<number>();
-  let cur = list.head;
+function listSegments(list: ListView): ListSegment[] {
+  const nodeMap = new Map(list.nodes.map((n) => [n.id, n]));
+  const visitedGlobal = new Set<number>();
+  const roots = buildRoots(list, nodeMap);
+  const segments: ListSegment[] = [];
+
+  roots.forEach((rootId, index) => {
+    if (!nodeMap.has(rootId) || visitedGlobal.has(rootId)) return;
+    const seg = buildSegment(list, rootId, index, nodeMap, visitedGlobal);
+    if (seg.nodes.length > 0) segments.push(seg);
+  });
+
+  if (segments.length === 0 && list.nodes.length > 0) {
+    const fallback = orderedNodes(list);
+    segments.push({
+      key: `${list.id}-fallback`,
+      nodes: fallback.length > 0 ? fallback : [list.nodes[0]!],
+      tailType: 'null',
+      tailTarget: null,
+    });
+  }
+
+  return segments;
+}
+
+function buildRoots(list: ListView, nodeMap: Map<number, ListNode>): number[] {
+  const roots: number[] = [];
+  const pointerEntries = Object.entries(props.state.pointers)
+    .filter(([, p]) => p.listId === list.id && p.nodeId != null) as Array<[string, { listId: string; nodeId: number }]>;
+  const pointerMap = new Map(pointerEntries.map(([name, p]) => [name, p.nodeId]));
+  const reverseMode = pointerMap.has('prev') || pointerMap.has('curr') || pointerMap.has('next');
+
+  const pushRoot = (id: number | null | undefined) => {
+    if (id == null || !nodeMap.has(id) || roots.includes(id)) return;
+    roots.push(id);
+  };
+
+  if (reverseMode) {
+    pushRoot(pointerMap.get('prev'));
+    pushRoot(pointerMap.get('curr'));
+    pushRoot(pointerMap.get('next'));
+  }
+
+  pushRoot(list.head);
+
+  const sortedPointers = pointerEntries
+    .sort((a, b) => {
+      const ai = POINTER_PRIORITY.indexOf(a[0] as (typeof POINTER_PRIORITY)[number]);
+      const bi = POINTER_PRIORITY.indexOf(b[0] as (typeof POINTER_PRIORITY)[number]);
+      const av = ai < 0 ? 999 : ai;
+      const bv = bi < 0 ? 999 : bi;
+      if (av !== bv) return av - bv;
+      return a[0].localeCompare(b[0]);
+    });
+
+  sortedPointers.forEach(([name, p]) => {
+    if (reverseMode && (name === 'prev' || name === 'curr' || name === 'next')) return;
+    pushRoot(p.nodeId);
+  });
+
+  list.nodes.forEach((node) => pushRoot(node.id));
+  return roots;
+}
+
+function buildSegment(
+  list: ListView,
+  rootId: number,
+  index: number,
+  nodeMap: Map<number, ListNode>,
+  visitedGlobal: Set<number>
+): ListSegment {
+  const nodes: ListNode[] = [];
+  const visitedLocal = new Set<number>();
+  let tailType: 'null' | 'link' | 'cycle' = 'null';
+  let tailTarget: number | null = null;
+  let cur: number | null = rootId;
+
   while (cur != null) {
-    if (visited.has(cur)) return cur;
-    visited.add(cur);
-    const node = list.nodes.find((n) => n.id === cur);
-    if (!node) break;
+    if (visitedLocal.has(cur)) {
+      tailType = 'cycle';
+      tailTarget = cur;
+      break;
+    }
+    if (visitedGlobal.has(cur)) {
+      tailType = 'link';
+      tailTarget = cur;
+      break;
+    }
+
+    const node = nodeMap.get(cur);
+    if (!node) {
+      tailType = 'null';
+      tailTarget = null;
+      break;
+    }
+
+    nodes.push(node);
+    visitedLocal.add(cur);
+    visitedGlobal.add(cur);
     cur = node.next;
   }
-  return null;
+
+  if (cur == null) {
+    tailType = 'null';
+    tailTarget = null;
+  }
+
+  return {
+    key: `${list.id}-${rootId}-${index}`,
+    nodes,
+    tailType,
+    tailTarget,
+  };
 }
 
 function pointerLabels(listId: string, nodeId: number): string[] {
@@ -136,7 +248,17 @@ watch(() => props.state, () => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
+  gap: 14px;
+}
+
+.list-segment {
+  display: flex;
+  align-items: center;
   gap: 12px;
+  padding: 6px 8px;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.55);
 }
 
 .node-wrap {
@@ -307,5 +429,12 @@ watch(() => props.state, () => {
 @keyframes cycleBlink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
+}
+
+.link-tag {
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.12);
+  animation: none;
 }
 </style>

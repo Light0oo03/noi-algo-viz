@@ -66,6 +66,24 @@ There is no unified automated test suite yet. Validate changes with:
 - 兼容规则：
   - 若后续恢复 GitHub Codex 审核，可额外触发 `@codex review` 作为补充，不替代本地双 Agent 审核流程。
 
+## Agent Bus Protocol (must)
+- 目标：让开发 Agent 与评审 Agent 在仓库内“无人工转述”协同。
+- 通信文件：`record/review/bus.md`（唯一通信总线）。
+- 状态枚举：
+  - `DEV_READY`：开发 Agent 已提交当前小模块，等待评审。
+  - `REVIEW_OPEN`：评审 Agent 已完成审查，存在待修复问题（详见 `record/review/current.md`）。
+  - `REVIEW_PASS`：评审 Agent 审查通过，允许进入下一小模块开发。
+- 开发 Agent 规则：
+  - 每次提交并 push 后，必须将 `bus.md` 更新为 `DEV_READY`，并附上提交哈希与模块说明。
+  - 仅当 `bus.md` 状态为 `REVIEW_PASS` 且 `current.md` 为 `PASS` 时，才能继续下一模块。
+  - 读取到 `REVIEW_OPEN` 后，必须先修复 `current.md` 中问题，再次提交并 push，然后将 `bus.md` 改回 `DEV_READY`。
+- 评审 Agent 规则：
+  - 读取到 `DEV_READY` 后开始审查，并更新 `record/review/current.md`。
+  - 若存在问题：`bus.md` 写 `REVIEW_OPEN`；若通过：`bus.md` 写 `REVIEW_PASS`。
+  - 必须在 `bus.md` 中写明对应提交哈希、评审时间与简述结论。
+- 冲突处理：
+  - 发生并发编辑冲突时，以“最新时间戳 + 最新提交哈希”作为有效状态。
+
 ## Persistence Rule for Visual Editors
 - Any user-editable visualization structure (for example graph/tree shape edits) must persist both locally and on backend.
 - Save locally on every structural change, with account-scoped keys (for example `prefix:<userId>`, `guest` when logged out).

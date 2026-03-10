@@ -6,19 +6,32 @@
           <div class="stack-title">递归栈视图</div>
           <div class="stack-subtitle">主画布同步展示调用链</div>
         </div>
-        <div class="stack-row">
+        <TransitionGroup tag="div" class="stack-row" name="stack-flow">
           <div
             v-for="(frame, index) in state.callStack"
             :key="`${frame.label}-${frame.left}-${frame.right}-${index}`"
-            :class="['stack-item', { active: index === state.callStack.length - 1 }]"
+            :class="['stack-item', `phase-${frame.phase}`, { active: index === state.callStack.length - 1 }]"
           >
             <div class="stack-topline">
               <div class="stack-index">#{{ index }}</div>
               <div class="stack-phase">{{ phaseText(frame.phase) }}</div>
             </div>
             <div class="stack-main">{{ frame.label }}({{ frame.left }}, {{ frame.right }})</div>
+            <div class="stack-visual">
+              <div class="stack-track">
+                <div class="stack-range" :style="rangeStyle(frame)"></div>
+              </div>
+              <div class="stack-markers">
+                <span class="marker">L{{ frame.left }}</span>
+                <span class="marker">R{{ frame.right }}</span>
+              </div>
+            </div>
+            <div v-if="index < state.callStack.length - 1" class="stack-arrow">
+              <span class="arrow-line"></span>
+              <span class="arrow-head"></span>
+            </div>
           </div>
-        </div>
+        </TransitionGroup>
       </div>
 
       <div class="bar-stage">
@@ -66,6 +79,18 @@ function barStyle(value: number): Record<string, string> {
 function pointerStyle(index: number): Record<string, string> {
   return {
     left: `${(index + 1) * 62 + 26}px`,
+  };
+}
+
+function rangeStyle(frame: SortVizState['callStack'][number]): Record<string, string> {
+  const total = Math.max(props.state.items.length, 1);
+  const left = Math.max(0, Math.min(frame.left, total - 1));
+  const right = Math.max(left, Math.min(frame.right, total - 1));
+  const width = ((right - left + 1) / total) * 100;
+  const offset = (left / total) * 100;
+  return {
+    left: `${offset}%`,
+    width: `${width}%`,
   };
 }
 
@@ -208,12 +233,33 @@ function phaseText(phase: SortVizState['callStack'][number]['phase']): string {
   border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   background: rgba(248, 250, 252, 0.9);
+  position: relative;
+  overflow: hidden;
 }
 
 .stack-item.active {
   border-color: rgba(37, 99, 235, 0.28);
   background: linear-gradient(135deg, rgba(219, 234, 254, 0.95), rgba(239, 246, 255, 0.95));
   box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+  transform: translateY(-4px) scale(1.02);
+}
+
+.phase-enter {
+  border-color: rgba(59, 130, 246, 0.18);
+}
+
+.phase-left,
+.phase-right {
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+.phase-merge {
+  border-color: rgba(16, 185, 129, 0.24);
+}
+
+.phase-base,
+.phase-done {
+  border-color: rgba(245, 158, 11, 0.24);
 }
 
 .stack-topline {
@@ -245,9 +291,80 @@ function phaseText(phase: SortVizState['callStack'][number]['phase']): string {
   word-break: break-word;
 }
 
+.stack-visual {
+  margin-top: 10px;
+}
+
+.stack-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(203, 213, 225, 0.55);
+  overflow: hidden;
+}
+
+.stack-range {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #34d399, #10b981);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.24);
+}
+
+.phase-left .stack-range,
+.phase-right .stack-range {
+  background: linear-gradient(90deg, #8b5cf6, #6366f1);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.22);
+}
+
+.phase-base .stack-range,
+.phase-done .stack-range {
+  background: linear-gradient(90deg, #f59e0b, #f97316);
+  box-shadow: 0 0 12px rgba(249, 115, 22, 0.22);
+}
+
+.stack-markers {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 10px;
+  color: #64748b;
+}
+
+.marker {
+  font-weight: 600;
+}
+
 .stack-phase {
   font-size: 11px;
   color: #475569;
+}
+
+.stack-arrow {
+  position: absolute;
+  right: -18px;
+  top: 50%;
+  width: 18px;
+  height: 12px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+}
+
+.arrow-line {
+  width: 12px;
+  height: 2px;
+  background: rgba(15, 118, 110, 0.45);
+  border-radius: 999px;
+}
+
+.arrow-head {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid rgba(15, 118, 110, 0.6);
 }
 
 .pointer {
@@ -269,6 +386,22 @@ function phaseText(phase: SortVizState['callStack'][number]['phase']): string {
 .item-sorted .bar { background: #22c55e; }
 .item-pivot .bar { background: #f59e0b; }
 .item-swap .bar { background: #ef4444; }
+
+.stack-flow-enter-active,
+.stack-flow-leave-active,
+.stack-flow-move {
+  transition: transform 0.28s ease, opacity 0.28s ease;
+}
+
+.stack-flow-enter-from {
+  opacity: 0;
+  transform: translateY(-12px) scale(0.94);
+}
+
+.stack-flow-leave-to {
+  opacity: 0;
+  transform: translateY(-18px) scale(0.9);
+}
 
 @media (max-width: 980px) {
   .stack-strip-head {

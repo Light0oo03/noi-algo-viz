@@ -1,40 +1,44 @@
 <template>
   <div class="sort-canvas">
-    <div :class="['sort-layout', { 'has-stack': state.callStack.length > 0 }]">
-      <div class="sort-stage">
-        <div class="bars-row">
-          <div
-            v-for="(item, index) in state.items"
-            :key="item.id"
-            :class="['bar-wrap', itemStateClass(item.id)]"
-          >
-            <div class="bar" :style="barStyle(item.value)"></div>
-            <div class="value">{{ item.value }}</div>
-            <div class="index">{{ index }}</div>
-          </div>
+    <div class="sort-stage">
+      <div v-if="state.callStack.length > 0" class="stack-strip">
+        <div class="stack-strip-head">
+          <div class="stack-title">递归栈视图</div>
+          <div class="stack-subtitle">主画布同步展示调用链</div>
         </div>
-
-        <div class="pointer-row">
-          <div v-if="state.pointers.i !== undefined" class="pointer i" :style="pointerStyle(state.pointers.i)">i</div>
-          <div v-if="state.pointers.j !== undefined" class="pointer j" :style="pointerStyle(state.pointers.j)">j</div>
-          <div v-if="state.pointers.min !== undefined" class="pointer min" :style="pointerStyle(state.pointers.min)">min</div>
-        </div>
-      </div>
-
-      <div v-if="state.callStack.length > 0" class="stack-panel">
-        <div class="stack-title">递归栈视图</div>
-        <div class="stack-subtitle">当前调用链会随步骤同步变化</div>
-        <div class="stack-list">
+        <div class="stack-row">
           <div
             v-for="(frame, index) in state.callStack"
             :key="`${frame.label}-${frame.left}-${frame.right}-${index}`"
             :class="['stack-item', { active: index === state.callStack.length - 1 }]"
           >
-            <div class="stack-index">#{{ index }}</div>
-            <div class="stack-body">
-              <div class="stack-main">{{ frame.label }}({{ frame.left }}, {{ frame.right }})</div>
+            <div class="stack-topline">
+              <div class="stack-index">#{{ index }}</div>
               <div class="stack-phase">{{ phaseText(frame.phase) }}</div>
             </div>
+            <div class="stack-main">{{ frame.label }}({{ frame.left }}, {{ frame.right }})</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar-stage">
+        <div class="bar-cluster">
+          <div class="bars-row">
+            <div
+              v-for="(item, index) in state.items"
+              :key="item.id"
+              :class="['bar-wrap', itemStateClass(item.id)]"
+            >
+              <div class="bar" :style="barStyle(item.value)"></div>
+              <div class="value">{{ item.value }}</div>
+              <div class="index">{{ index }}</div>
+            </div>
+          </div>
+
+          <div class="pointer-row">
+            <div v-if="state.pointers.i !== undefined" class="pointer i" :style="pointerStyle(state.pointers.i)">i</div>
+            <div v-if="state.pointers.j !== undefined" class="pointer j" :style="pointerStyle(state.pointers.j)">j</div>
+            <div v-if="state.pointers.min !== undefined" class="pointer min" :style="pointerStyle(state.pointers.min)">min</div>
           </div>
         </div>
       </div>
@@ -61,7 +65,7 @@ function barStyle(value: number): Record<string, string> {
 
 function pointerStyle(index: number): Record<string, string> {
   return {
-    left: `${index * 62 + 28}px`,
+    left: `${(index + 1) * 62 + 26}px`,
   };
 }
 
@@ -92,25 +96,34 @@ function phaseText(phase: SortVizState['callStack'][number]['phase']): string {
   border-radius: 12px;
   padding: 28px;
   min-height: 500px;
-  overflow-x: auto;
-}
-
-.sort-layout {
-  display: flex;
-  gap: 24px;
-  min-height: 440px;
-}
-
-.sort-layout.has-stack .sort-stage {
-  flex: 1;
-  min-width: 420px;
+  overflow: auto;
 }
 
 .sort-stage {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  justify-content: center;
+  gap: 22px;
+  min-height: 440px;
+}
+
+.stack-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(240, 253, 250, 0.92)),
+    radial-gradient(circle at top left, rgba(16, 185, 129, 0.14), transparent 45%);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+}
+
+.stack-strip-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .bars-row {
@@ -147,24 +160,25 @@ function phaseText(phase: SortVizState['callStack'][number]['phase']): string {
   color: #64748b;
 }
 
+.bar-stage {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 0;
+}
+
+.bar-cluster {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: stretch;
+  padding: 0 62px;
+}
+
 .pointer-row {
   position: relative;
   height: 24px;
-}
-
-.stack-panel {
-  width: 260px;
-  flex: 0 0 260px;
-  display: flex;
-  flex-direction: column;
-  align-self: stretch;
-  padding: 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(16, 185, 129, 0.18);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(240, 253, 250, 0.92)),
-    radial-gradient(circle at top, rgba(16, 185, 129, 0.16), transparent 55%);
-  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
 }
 
 .stack-title {
@@ -174,22 +188,22 @@ function phaseText(phase: SortVizState['callStack'][number]['phase']): string {
 }
 
 .stack-subtitle {
-  margin-top: 4px;
   font-size: 11px;
   color: #64748b;
 }
 
-.stack-list {
-  margin-top: 14px;
+.stack-row {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 10px;
   overflow: auto;
 }
 
 .stack-item {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  min-width: 180px;
+  max-width: 240px;
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -200,6 +214,13 @@ function phaseText(phase: SortVizState['callStack'][number]['phase']): string {
   border-color: rgba(37, 99, 235, 0.28);
   background: linear-gradient(135deg, rgba(219, 234, 254, 0.95), rgba(239, 246, 255, 0.95));
   box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+}
+
+.stack-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .stack-index {
@@ -215,11 +236,8 @@ function phaseText(phase: SortVizState['callStack'][number]['phase']): string {
   font-weight: 700;
 }
 
-.stack-body {
-  min-width: 0;
-}
-
 .stack-main {
+  margin-top: 8px;
   font-size: 12px;
   font-weight: 700;
   color: #0f172a;
@@ -228,7 +246,6 @@ function phaseText(phase: SortVizState['callStack'][number]['phase']): string {
 }
 
 .stack-phase {
-  margin-top: 4px;
   font-size: 11px;
   color: #475569;
 }
@@ -254,17 +271,9 @@ function phaseText(phase: SortVizState['callStack'][number]['phase']): string {
 .item-swap .bar { background: #ef4444; }
 
 @media (max-width: 980px) {
-  .sort-layout {
+  .stack-strip-head {
     flex-direction: column;
-  }
-
-  .sort-layout.has-stack .sort-stage {
-    min-width: 0;
-  }
-
-  .stack-panel {
-    width: 100%;
-    flex-basis: auto;
+    align-items: flex-start;
   }
 }
 </style>

@@ -68,6 +68,14 @@
         >
           退出沉浸（Esc）
         </el-button>
+        <el-button
+          class="floating-toggle-btn"
+          circle
+          plain
+          :icon="showFloatingPanel ? Hide : View"
+          :aria-label="showFloatingPanel ? '隐藏说明面板' : '显示说明面板'"
+          @click="showFloatingPanel = !showFloatingPanel"
+        />
         <GraphCanvas
           v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo && !isTreeAlgo && !isSearchAlgo && !isSortAlgo"
           :graph="graph"
@@ -96,7 +104,7 @@
         />
         <SearchCanvas v-else-if="isSearchAlgo" :state="searchVizState" :algo-key="selectedAlgo" />
         <SortCanvas v-else-if="isSortAlgo" :state="sortVizState" />
-        <div ref="floatingPanelRef" class="floating-panel" :style="floatingPanelStyle">
+        <div v-if="showFloatingPanel" ref="floatingPanelRef" class="floating-panel" :style="floatingPanelStyle">
           <div class="floating-panel-drag-handle" @mousedown="onFloatingPanelDragStart">拖动说明面板</div>
           <StatePanel
             v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo && !isTreeAlgo && !isSearchAlgo && !isSortAlgo"
@@ -316,7 +324,7 @@
 import { reactive, ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { Fold, Expand } from '@element-plus/icons-vue';
+import { Fold, Expand, View, Hide } from '@element-plus/icons-vue';
 import { storeToRefs } from 'pinia';
 import GraphCanvas from '../components/GraphCanvas.vue';
 import PlayerControls from '../components/PlayerControls.vue';
@@ -2725,6 +2733,7 @@ watch(graphMode, (mode) => {
 const centerRef = ref<any>(null);
 const floatingPanelRef = ref<HTMLElement | null>(null);
 const immersiveMode = ref(false);
+const showFloatingPanel = ref(true);
 const floatingPanelPos = reactive({
   x: 0,
   y: 0,
@@ -2866,6 +2875,19 @@ function toggleImmersiveMode() {
 
 watch(immersiveMode, async () => {
   await nextTick();
+  onFloatingPanelWindowResize();
+});
+
+watch(showFloatingPanel, async (visible) => {
+  if (!visible) {
+    stopFloatingPanelDrag();
+    return;
+  }
+  await nextTick();
+  if (!floatingPanelPos.initialized) {
+    initFloatingPanelPos();
+    return;
+  }
   onFloatingPanelWindowResize();
 });
 
@@ -3220,6 +3242,23 @@ watch(
   top: 16px;
   right: 16px;
   z-index: 12;
+}
+
+.floating-toggle-btn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 12;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.floating-toggle-btn:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(240, 253, 250, 0.96);
 }
 .floating-panel {
   position: absolute;

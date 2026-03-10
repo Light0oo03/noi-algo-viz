@@ -38,6 +38,11 @@ There is no unified automated test suite yet. Validate changes with:
 - Keep commits scoped (frontend vs backend vs infra) and avoid mixing unrelated changes.
 - Agent execution rule: when a coding task is completed to a clean, committable scope, the agent should commit automatically without waiting for an extra "please commit".
 - Agent execution rule: after auto-commit, the agent should also run `git push` by default. If push fails due to auth/network/remote policy, report the exact error and next action.
+- Agent workflow rule (must): 每完成一个“可测试小模块”，必须先给出明确验收步骤，再进入下一模块开发。
+- Agent workflow rule (must): 每次向 PR 分支 push 后，必须触发 Codex 审核（`@codex review`），并等待审核结果返回后再继续功能迭代。
+- Agent workflow rule (must): 若 Codex 提出修改建议，必须先修复并 push，再次触发审核，直到无阻塞性建议。
+- Agent workflow rule (must): 审核通过后，涉及 `merge`/删除分支操作前，必须先征求用户同意。
+- Agent workflow rule (must): 每次修复 bug 或实现新功能，都必须记录到 `record/YYYY-MM-DD.md`。
 - PRs should include:
   - clear change summary and motivation,
   - linked issue/task,

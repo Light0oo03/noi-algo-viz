@@ -136,8 +136,8 @@
       >
         <template #extra>
           <el-radio-group v-model="graphMode" size="small" class="graph-mode-radio">
-            <el-radio-button label="undirected">无向图</el-radio-button>
-            <el-radio-button label="directed">有向图</el-radio-button>
+            <el-radio-button value="undirected">无向图</el-radio-button>
+            <el-radio-button value="directed">有向图</el-radio-button>
           </el-radio-group>
           <el-input
             v-model="directedEdgesInput"

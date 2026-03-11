@@ -509,6 +509,10 @@ function getScopedStorageKey(prefix: string): string {
   return userId ? `${prefix}:${userId}` : `${prefix}:guest`;
 }
 
+function getScopedStorageKeyForUser(prefix: string, userId?: string | null): string {
+  return userId ? `${prefix}:${userId}` : `${prefix}:guest`;
+}
+
 type SearchLocalState = {
   arrayInput: string;
   target: number;
@@ -527,9 +531,30 @@ function saveSearchToLocal(arrayInput: string, target: number) {
   window.localStorage.setItem(key, JSON.stringify(payload));
 }
 
+function saveSearchToLocalForUser(arrayInput: string, target: number, userId?: string | null) {
+  if (typeof window === 'undefined') return;
+  const key = getScopedStorageKeyForUser(SEARCH_STORAGE_KEY_PREFIX, userId);
+  const payload: SearchLocalState = { arrayInput, target };
+  window.localStorage.setItem(key, JSON.stringify(payload));
+}
+
 function loadSearchFromLocal(): SearchLocalState | null {
   if (typeof window === 'undefined') return null;
   const key = getScopedStorageKey(SEARCH_STORAGE_KEY_PREFIX);
+  const raw = window.localStorage.getItem(key);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!isValidSearchLocalState(parsed)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function loadSearchFromLocalForUser(userId?: string | null): SearchLocalState | null {
+  if (typeof window === 'undefined') return null;
+  const key = getScopedStorageKeyForUser(SEARCH_STORAGE_KEY_PREFIX, userId);
   const raw = window.localStorage.getItem(key);
   if (!raw) return null;
   try {
@@ -547,9 +572,22 @@ function saveSortToLocal(arrayInput: string) {
   window.localStorage.setItem(key, arrayInput);
 }
 
+function saveSortToLocalForUser(arrayInput: string, userId?: string | null) {
+  if (typeof window === 'undefined') return;
+  const key = getScopedStorageKeyForUser(SORT_STORAGE_KEY_PREFIX, userId);
+  window.localStorage.setItem(key, arrayInput);
+}
+
 function loadSortFromLocal(): string | null {
   if (typeof window === 'undefined') return null;
   const key = getScopedStorageKey(SORT_STORAGE_KEY_PREFIX);
+  const raw = window.localStorage.getItem(key);
+  return typeof raw === 'string' && raw.trim().length > 0 ? raw : null;
+}
+
+function loadSortFromLocalForUser(userId?: string | null): string | null {
+  if (typeof window === 'undefined') return null;
+  const key = getScopedStorageKeyForUser(SORT_STORAGE_KEY_PREFIX, userId);
   const raw = window.localStorage.getItem(key);
   return typeof raw === 'string' && raw.trim().length > 0 ? raw : null;
 }
@@ -1525,6 +1563,28 @@ function restoreSearchFromLocal(note?: string) {
   if (note) searchVizState.note = note;
 }
 
+function restoreSearchFromBestLocal(note?: string): 'user' | 'guest' | null {
+  const userId = auth.user?.id;
+  const userLocal = loadSearchFromLocalForUser(userId);
+  const guestLocal = loadSearchFromLocalForUser(null);
+  const local = userLocal ?? guestLocal;
+  if (!local) return null;
+  searchArrayInput.value = local.arrayInput;
+  searchTarget.value = local.target;
+  const items = parseSearchArray(searchArrayInput.value) ?? parseSearchArray(DEFAULT_SEARCH_ARRAY_INPUT)!;
+  const next = createInitialSearchVizState(items, searchTarget.value);
+  searchPlayer.updateInitialState(next);
+  searchPlayer.clear();
+  syncSearchVizState(next);
+  searchCurrentStep.value = 0;
+  searchTotalSteps.value = 0;
+  if (userId) {
+    saveSearchToLocalForUser(local.arrayInput, local.target, userId);
+  }
+  if (note) searchVizState.note = note;
+  return userLocal ? 'user' : 'guest';
+}
+
 function restoreSortFromLocal(note?: string) {
   const local = loadSortFromLocal();
   if (!local) return;
@@ -1537,6 +1597,27 @@ function restoreSortFromLocal(note?: string) {
   sortCurrentStep.value = 0;
   sortTotalSteps.value = 0;
   if (note) sortVizState.note = note;
+}
+
+function restoreSortFromBestLocal(note?: string): 'user' | 'guest' | null {
+  const userId = auth.user?.id;
+  const userLocal = loadSortFromLocalForUser(userId);
+  const guestLocal = loadSortFromLocalForUser(null);
+  const local = userLocal ?? guestLocal;
+  if (!local) return null;
+  sortArrayInput.value = local;
+  const values = parseSortArray(sortArrayInput.value) ?? parseSortArray(DEFAULT_SORT_ARRAY_INPUT)!;
+  const next = createInitialSortVizState(values);
+  sortPlayer.updateInitialState(next);
+  sortPlayer.clear();
+  syncSortVizState(next);
+  sortCurrentStep.value = 0;
+  sortTotalSteps.value = 0;
+  if (userId) {
+    saveSortToLocalForUser(local, userId);
+  }
+  if (note) sortVizState.note = note;
+  return userLocal ? 'user' : 'guest';
 }
 
 function restoreDirectedEdgesFromLocal() {
@@ -2980,7 +3061,7 @@ async function loadSearchFromServer(): Promise<boolean> {
   const next = data.search as SearchLocalState;
   searchArrayInput.value = next.arrayInput;
   searchTarget.value = next.target;
-  saveSearchToLocal(next.arrayInput, next.target);
+  saveSearchToLocalForUser(next.arrayInput, next.target, auth.user?.id);
   return true;
 }
 
@@ -3000,7 +3081,7 @@ async function loadSortFromServer(): Promise<boolean> {
     return false;
   }
   sortArrayInput.value = arrayInput;
-  saveSortToLocal(arrayInput);
+  saveSortToLocalForUser(arrayInput, auth.user?.id);
   return true;
 }
 
@@ -3055,11 +3136,17 @@ async function onLogin() {
     }
     const searchLoaded = await loadSearchFromServer();
     if (!searchLoaded) {
-      restoreSearchFromLocal('云端无数据，已加载本地查找配置。');
+      const source = restoreSearchFromBestLocal('云端无数据，已加载本地查找配置。');
+      if (source) {
+        await saveSearchImmediately(searchArrayInput.value, searchTarget.value);
+      }
     }
     const sortLoaded = await loadSortFromServer();
     if (!sortLoaded) {
-      restoreSortFromLocal('云端无数据，已加载本地排序配置。');
+      const source = restoreSortFromBestLocal('云端无数据，已加载本地排序配置。');
+      if (source) {
+        await saveSortImmediately(sortArrayInput.value);
+      }
     }
     await router.push('/');
   } catch (e: any) {
@@ -3128,12 +3215,18 @@ watch(
       });
       void loadSearchFromServer().then((loaded) => {
         if (!loaded) {
-          restoreSearchFromLocal('云端无数据，已加载本地查找配置。');
+          const source = restoreSearchFromBestLocal('云端无数据，已加载本地查找配置。');
+          if (source) {
+            void saveSearchImmediately(searchArrayInput.value, searchTarget.value);
+          }
         }
       });
       void loadSortFromServer().then((loaded) => {
         if (!loaded) {
-          restoreSortFromLocal('云端无数据，已加载本地排序配置。');
+          const source = restoreSortFromBestLocal('云端无数据，已加载本地排序配置。');
+          if (source) {
+            void saveSortImmediately(sortArrayInput.value);
+          }
         }
       });
     }

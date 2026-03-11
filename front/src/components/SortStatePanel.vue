@@ -16,6 +16,7 @@
       <div class="section-title">📊 当前数组</div>
       <div class="meta mono">{{ state.items.map(i => i.value).join(', ') }}</div>
     </div>
+
   </div>
 </template>
 

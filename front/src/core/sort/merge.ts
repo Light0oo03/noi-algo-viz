@@ -19,6 +19,7 @@ export function generateMergeSortTrace(values: number[]): SortTrace {
   }
 
   function merge(left: number, mid: number, right: number) {
+    state.callStack[state.callStack.length - 1]!.phase = 'merge';
     state.pointers.i = left;
     state.pointers.min = mid;
     state.pointers.j = right;
@@ -84,28 +85,41 @@ export function generateMergeSortTrace(values: number[]): SortTrace {
   }
 
   function mergeSort(left: number, right: number) {
+    state.callStack.push({ label: 'mergeSort', left, right, phase: 'enter' });
     if (left >= right) {
+      state.callStack[state.callStack.length - 1]!.phase = 'base';
       if (left === right) {
         state.itemStates[state.items[left]!.id] = 'sorted';
       }
       state.highlightLines = MERGE_SORT_CODE_LINES.base;
+      state.note = `区间 [${left}, ${right}] 到达递归基线`;
       addStep('base');
+      state.callStack.pop();
       return;
     }
     const mid = Math.floor((left + right) / 2);
+    state.callStack[state.callStack.length - 1]!.phase = 'enter';
     state.highlightLines = MERGE_SORT_CODE_LINES.mid;
     state.note = `拆分区间 [${left}, ${right}]，mid=${mid}`;
     addStep('split');
 
+    state.callStack[state.callStack.length - 1]!.phase = 'left';
     state.highlightLines = MERGE_SORT_CODE_LINES.recurseLeft;
+    state.note = `递归左区间 [${left}, ${mid}]`;
     addStep('left');
     mergeSort(left, mid);
 
+    state.callStack[state.callStack.length - 1]!.phase = 'right';
     state.highlightLines = MERGE_SORT_CODE_LINES.recurseRight;
+    state.note = `递归右区间 [${mid + 1}, ${right}]`;
     addStep('right');
     mergeSort(mid + 1, right);
 
     merge(left, mid, right);
+    state.callStack[state.callStack.length - 1]!.phase = 'done';
+    state.note = `区间 [${left}, ${right}] 归并完成`;
+    addStep('return');
+    state.callStack.pop();
   }
 
   state.note = '🚀 开始归并排序';

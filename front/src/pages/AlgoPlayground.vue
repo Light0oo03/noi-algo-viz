@@ -1,9 +1,12 @@
 <template>
-  <el-container class="page">
+  <el-container :class="['page', { 'immersive-mode': immersiveMode }]">
     <el-header class="header">
       <div class="title-row">
         <div class="title">NOI 算法可视化学习平台（MVP）</div>
         <el-button class="ghost-btn" size="small" plain @click="goHome">返回首页</el-button>
+        <el-button class="ghost-btn" size="small" plain @click="toggleImmersiveMode">
+          {{ immersiveMode ? '退出沉浸' : '沉浸模式' }}
+        </el-button>
       </div>
       <div class="sub">{{ currentAlgoDesc }}</div>
       <div class="auth">
@@ -55,6 +58,24 @@
       </el-aside>
 
       <el-main ref="centerRef" class="center">
+        <el-button
+          v-if="immersiveMode"
+          class="immersive-exit-btn"
+          size="small"
+          type="primary"
+          plain
+          @click="toggleImmersiveMode"
+        >
+          退出沉浸（Esc）
+        </el-button>
+        <el-button
+          class="floating-toggle-btn"
+          circle
+          plain
+          :icon="showFloatingPanel ? Hide : View"
+          :aria-label="showFloatingPanel ? '隐藏说明面板' : '显示说明面板'"
+          @click="showFloatingPanel = !showFloatingPanel"
+        />
         <GraphCanvas
           v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo && !isTreeAlgo && !isSearchAlgo && !isSortAlgo"
           :graph="graph"
@@ -83,7 +104,7 @@
         />
         <SearchCanvas v-else-if="isSearchAlgo" :state="searchVizState" :algo-key="selectedAlgo" />
         <SortCanvas v-else-if="isSortAlgo" :state="sortVizState" />
-        <div ref="floatingPanelRef" class="floating-panel" :style="floatingPanelStyle">
+        <div v-if="showFloatingPanel" ref="floatingPanelRef" class="floating-panel" :style="floatingPanelStyle">
           <div class="floating-panel-drag-handle" @mousedown="onFloatingPanelDragStart">拖动说明面板</div>
           <StatePanel
             v-if="!isListAlgo && !isStackAlgo && !isQueueAlgo && !isTreeAlgo && !isSearchAlgo && !isSortAlgo"
@@ -97,7 +118,12 @@
           <StackStatePanel v-else-if="isStackAlgo" :note="stackVizState.note" :state="stackVizState" />
           <QueueStatePanel v-else-if="isQueueAlgo" :note="queueVizState.note" :state="queueVizState" />
           <TreeStatePanel v-else-if="isTreeAlgo" :note="treeVizState.note" :state="treeVizState" />
-          <SearchStatePanel v-else-if="isSearchAlgo" :note="searchVizState.note" :state="searchVizState" />
+          <SearchStatePanel
+            v-else-if="isSearchAlgo"
+            :note="searchVizState.note"
+            :state="searchVizState"
+            :algo-key="selectedAlgo"
+          />
           <SortStatePanel v-else-if="isSortAlgo" :note="sortVizState.note" :state="sortVizState" />
         </div>
       </el-main>
@@ -131,8 +157,8 @@
       >
         <template #extra>
           <el-radio-group v-model="graphMode" size="small" class="graph-mode-radio">
-            <el-radio-button label="undirected">无向图</el-radio-button>
-            <el-radio-button label="directed">有向图</el-radio-button>
+            <el-radio-button value="undirected">无向图</el-radio-button>
+            <el-radio-button value="directed">有向图</el-radio-button>
           </el-radio-group>
           <el-input
             v-model="directedEdgesInput"
@@ -298,7 +324,7 @@
 import { reactive, ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { Fold, Expand } from '@element-plus/icons-vue';
+import { Fold, Expand, View, Hide } from '@element-plus/icons-vue';
 import { storeToRefs } from 'pinia';
 import GraphCanvas from '../components/GraphCanvas.vue';
 import PlayerControls from '../components/PlayerControls.vue';
@@ -1462,6 +1488,7 @@ function syncSortVizState(state: SortVizState) {
   sortVizState.items = state.items;
   sortVizState.itemStates = state.itemStates;
   sortVizState.pointers = state.pointers;
+  sortVizState.callStack = state.callStack;
   sortVizState.note = state.note;
   sortVizState.highlightLines = state.highlightLines;
 }
@@ -2705,6 +2732,8 @@ watch(graphMode, (mode) => {
 
 const centerRef = ref<any>(null);
 const floatingPanelRef = ref<HTMLElement | null>(null);
+const immersiveMode = ref(false);
+const showFloatingPanel = ref(true);
 const floatingPanelPos = reactive({
   x: 0,
   y: 0,
@@ -2808,6 +2837,11 @@ function isEditingText(): boolean {
 }
 
 function onKeyDown(evt: KeyboardEvent) {
+  if (evt.key === 'Escape' && immersiveMode.value) {
+    immersiveMode.value = false;
+    evt.preventDefault();
+    return;
+  }
   if (isEditingText()) return;
   if (graphPlayerStatus.value === 'playing') return;
   if (isListAlgo.value || isStackAlgo.value || isQueueAlgo.value || isTreeAlgo.value || isSearchAlgo.value || isSortAlgo.value) return;
@@ -2834,6 +2868,28 @@ function onKeyDown(evt: KeyboardEvent) {
     vizState.note = ok ? '已取消撤回。' : '没有可取消撤回的操作。';
   }
 }
+
+function toggleImmersiveMode() {
+  immersiveMode.value = !immersiveMode.value;
+}
+
+watch(immersiveMode, async () => {
+  await nextTick();
+  onFloatingPanelWindowResize();
+});
+
+watch(showFloatingPanel, async (visible) => {
+  if (!visible) {
+    stopFloatingPanelDrag();
+    return;
+  }
+  await nextTick();
+  if (!floatingPanelPos.initialized) {
+    initFloatingPanelPos();
+    return;
+  }
+  onFloatingPanelWindowResize();
+});
 
 onMounted(async () => {
   await nextTick();
@@ -3180,6 +3236,30 @@ watch(
   padding: 12px;
   overflow: hidden;
 }
+
+.immersive-exit-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 12;
+}
+
+.floating-toggle-btn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 12;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.floating-toggle-btn:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(240, 253, 250, 0.96);
+}
 .floating-panel {
   position: absolute;
   bottom: 20px;
@@ -3258,5 +3338,20 @@ watch(
 }
 :deep(.el-sub-menu__title) {
   font-weight: 600;
+}
+
+.page.immersive-mode .header,
+.page.immersive-mode .side-menu,
+.page.immersive-mode .right,
+.page.immersive-mode .footer {
+  display: none;
+}
+
+.page.immersive-mode .main {
+  height: 100vh;
+}
+
+.page.immersive-mode .center {
+  padding: 8px;
 }
 </style>

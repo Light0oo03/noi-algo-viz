@@ -11,10 +11,18 @@ export interface SortPointers {
   min?: number;
 }
 
+export interface SortCallFrame {
+  label: string;
+  left: number;
+  right: number;
+  phase: 'enter' | 'left' | 'right' | 'merge' | 'base' | 'done';
+}
+
 export interface SortVizState {
   items: SortItem[];
   itemStates: Record<number, SortItemState>;
   pointers: SortPointers;
+  callStack: SortCallFrame[];
   note: string;
   highlightLines?: [number, number];
 }
@@ -38,6 +46,7 @@ export function createInitialSortVizState(values: number[]): SortVizState {
     items,
     itemStates,
     pointers: {},
+    callStack: [],
     note: '准备开始排序... ',
   };
 }
@@ -47,6 +56,7 @@ export function cloneSortVizState(state: SortVizState): SortVizState {
     items: state.items.map((item) => ({ ...item })),
     itemStates: { ...state.itemStates },
     pointers: { ...state.pointers },
+    callStack: state.callStack.map((frame) => ({ ...frame })),
     note: state.note,
     highlightLines: state.highlightLines ? [...state.highlightLines] as [number, number] : undefined,
   };

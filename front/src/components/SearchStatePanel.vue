@@ -18,7 +18,7 @@
       <div class="meta">index: {{ pointerText(state.pointers.index) }}</div>
     </div>
 
-    <div v-if="state.treeNodes?.length" class="section">
+    <div v-if="showTreeRouteSection" class="section">
       <div class="section-title">🧭 树路由</div>
       <div class="meta">active-node: {{ activeTreeNodeText }}</div>
       <div class="meta">rule: {{ state.routeHint || '-' }}</div>
@@ -26,16 +26,36 @@
       <div class="meta">visited-edges: {{ visitedEdgeCount }}</div>
       <div class="path-head">
         <span class="meta">node-path:</span>
-        <div class="path-actions" v-if="hasNodePath">
-          <button type="button" class="path-btn" @click="togglePathExpanded">
+        <div class="path-actions">
+          <button type="button" class="path-btn" :disabled="!hasNodePath" @click="togglePathExpanded">
             {{ isPathExpanded ? '收起' : '展开' }}
           </button>
-          <button type="button" class="path-btn" @click="copyNodePath">
+          <button type="button" class="path-btn" :disabled="!hasNodePath" @click="copyNodePath">
             {{ copyButtonText }}
           </button>
         </div>
       </div>
       <div class="meta mono node-path" :class="{ collapsed: !isPathExpanded }">{{ visitedNodePathText }}</div>
+      <div v-if="showManualCopyFallback" class="manual-copy">
+        <div class="manual-copy-head">
+          <span>浏览器限制复制，请手动复制以下路径：</span>
+          <div class="manual-copy-actions">
+            <button type="button" class="path-btn" @click="selectManualCopyText(true)">
+              {{ selectButtonText }}
+            </button>
+            <button type="button" class="path-btn" @click="retryCopy">重试复制</button>
+            <button type="button" class="path-btn" @click="hideManualFallback">关闭</button>
+          </div>
+        </div>
+        <textarea
+          ref="manualCopyTextareaRef"
+          class="manual-copy-input mono"
+          readonly
+          :value="visitedNodePathText"
+          @focus="handleManualCopyFocus"
+        />
+        <div class="manual-copy-hint">快捷键：{{ copyShortcutHint }}</div>
+      </div>
     </div>
 
     <div class="section">
@@ -46,12 +66,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import type { SearchVizState } from '../core/search/types';
 
 const props = defineProps<{
   note: string;
   state: SearchVizState;
+  algoKey?: string;
 }>();
 
 const activeTreeNodeText = computed(() => {
@@ -68,14 +89,30 @@ const visitedNodePathText = computed(() => {
   return ids.length > 0 ? ids.join(' -> ') : '-';
 });
 const hasNodePath = computed(() => (props.state.visitedTreeNodeIds?.length ?? 0) > 0);
+const isTreeSearchAlgo = computed(() => props.algoKey === 'b-tree-search' || props.algoKey === 'b-plus-tree-search');
+const showTreeRouteSection = computed(() => (
+  isTreeSearchAlgo.value
+  || hasNodePath.value
+  || (props.state.treeNodes?.length ?? 0) > 0
+));
 const isPathExpanded = ref(false);
 const copyButtonText = ref('复制');
+const selectButtonText = ref('全选文本');
+const showManualCopyFallback = ref(false);
+const manualCopyTextareaRef = ref<HTMLTextAreaElement | null>(null);
+let copyTextTimer: number | null = null;
+let selectTextTimer: number | null = null;
+const copyShortcutHint = computed(() => (
+  typeof navigator !== 'undefined' && /mac/i.test(navigator.platform) ? 'Command + C' : 'Ctrl + C'
+));
 
 watch(
   () => visitedNodePathText.value,
-  (next) => {
-    isPathExpanded.value = next.length <= 48;
-    copyButtonText.value = '复制';
+  (path) => {
+    isPathExpanded.value = path.length <= 48;
+    resetCopyButtonText();
+    resetSelectButtonText();
+    showManualCopyFallback.value = false;
   },
   { immediate: true }
 );
@@ -86,17 +123,124 @@ function togglePathExpanded() {
 
 async function copyNodePath() {
   if (!hasNodePath.value) return;
+  const ok = await copyText(visitedNodePathText.value);
+  setCopyButtonFeedback(ok ? '已复制' : '复制失败，请手动复制');
+  showManualCopyFallback.value = !ok;
+  if (!ok) {
+    requestAnimationFrame(() => selectManualCopyText());
+  }
+}
+
+async function copyText(text: string): Promise<boolean> {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fallback to execCommand for restricted clipboard environments.
+    }
+  }
+
+  let textarea: HTMLTextAreaElement | null = null;
   try {
-    await navigator.clipboard.writeText(visitedNodePathText.value);
-    copyButtonText.value = '已复制';
+    textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    textarea.style.pointerEvents = 'none';
+    document.body.appendChild(textarea);
+    textarea.select();
+    return document.execCommand('copy');
   } catch {
-    copyButtonText.value = '复制失败';
+    return false;
+  } finally {
+    if (textarea?.parentNode) {
+      textarea.parentNode.removeChild(textarea);
+    }
   }
 }
 
 function pointerText(value: number | undefined): string {
   return value === undefined ? '-' : String(value);
 }
+
+function hideManualFallback() {
+  showManualCopyFallback.value = false;
+}
+
+function handleManualCopyFocus() {
+  selectManualCopyText();
+}
+
+function selectManualCopyText(fromButton = false) {
+  if (!manualCopyTextareaRef.value) return;
+  manualCopyTextareaRef.value.focus();
+  manualCopyTextareaRef.value.select();
+  if (fromButton) {
+    setSelectButtonFeedback('已全选');
+  }
+}
+
+async function retryCopy() {
+  const ok = await copyText(visitedNodePathText.value);
+  setCopyButtonFeedback(ok ? '已复制' : '复制失败，请手动复制');
+  showManualCopyFallback.value = !ok;
+  if (!ok) {
+    requestAnimationFrame(() => selectManualCopyText());
+  }
+}
+
+function setCopyButtonFeedback(text: string) {
+  copyButtonText.value = text;
+  if (copyTextTimer !== null) {
+    window.clearTimeout(copyTextTimer);
+    copyTextTimer = null;
+  }
+  if (text !== '复制') {
+    copyTextTimer = window.setTimeout(() => {
+      resetCopyButtonText();
+    }, 2200);
+  }
+}
+
+function resetCopyButtonText() {
+  if (copyTextTimer !== null) {
+    window.clearTimeout(copyTextTimer);
+    copyTextTimer = null;
+  }
+  copyButtonText.value = '复制';
+}
+
+function setSelectButtonFeedback(text: string) {
+  selectButtonText.value = text;
+  if (selectTextTimer !== null) {
+    window.clearTimeout(selectTextTimer);
+    selectTextTimer = null;
+  }
+  if (text !== '全选文本') {
+    selectTextTimer = window.setTimeout(() => {
+      resetSelectButtonText();
+    }, 1500);
+  }
+}
+
+function resetSelectButtonText() {
+  if (selectTextTimer !== null) {
+    window.clearTimeout(selectTextTimer);
+    selectTextTimer = null;
+  }
+  selectButtonText.value = '全选文本';
+}
+
+onBeforeUnmount(() => {
+  if (copyTextTimer !== null) {
+    window.clearTimeout(copyTextTimer);
+  }
+  if (selectTextTimer !== null) {
+    window.clearTimeout(selectTextTimer);
+  }
+});
 </script>
 
 <style scoped>
@@ -163,6 +307,11 @@ function pointerText(value: number | undefined): string {
   background: rgba(209, 250, 229, 0.9);
 }
 
+.path-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   word-break: break-all;
@@ -173,5 +322,47 @@ function pointerText(value: number | undefined): string {
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.manual-copy {
+  margin-top: 4px;
+  padding: 8px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 251, 235, 0.85);
+}
+
+.manual-copy-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #92400e;
+  margin-bottom: 6px;
+}
+
+.manual-copy-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.manual-copy-input {
+  width: 100%;
+  min-height: 58px;
+  resize: vertical;
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1f2937;
+  font-size: 12px;
+}
+
+.manual-copy-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #a16207;
 }
 </style>

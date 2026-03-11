@@ -3044,45 +3044,83 @@ async function loadTreeFromServer(): Promise<boolean> {
   return false;
 }
 
-async function loadSearchFromServer(): Promise<boolean> {
-  if (!auth.token) return false;
-  const res = await fetch(apiUrl('/search'), {
-    headers: { authorization: `Bearer ${auth.token}` },
-  });
-  if (res.status === 401) {
-    auth.logout();
-    return false;
+type RemoteConfigLoadState = 'loaded' | 'empty' | 'error' | 'unauthorized';
+
+async function loadSearchFromServer(): Promise<RemoteConfigLoadState> {
+  if (!auth.token) return 'unauthorized';
+  try {
+    const res = await fetch(apiUrl('/search'), {
+      headers: { authorization: `Bearer ${auth.token}` },
+    });
+    if (res.status === 401) {
+      auth.logout();
+      return 'unauthorized';
+    }
+    if (!res.ok) return 'error';
+    const data = await res.json();
+    if (!isValidSearchLocalState(data?.search)) {
+      return 'empty';
+    }
+    const next = data.search as SearchLocalState;
+    searchArrayInput.value = next.arrayInput;
+    searchTarget.value = next.target;
+    saveSearchToLocalForUser(next.arrayInput, next.target, auth.user?.id);
+    return 'loaded';
+  } catch {
+    return 'error';
   }
-  if (!res.ok) return false;
-  const data = await res.json();
-  if (!isValidSearchLocalState(data?.search)) {
-    return false;
-  }
-  const next = data.search as SearchLocalState;
-  searchArrayInput.value = next.arrayInput;
-  searchTarget.value = next.target;
-  saveSearchToLocalForUser(next.arrayInput, next.target, auth.user?.id);
-  return true;
 }
 
-async function loadSortFromServer(): Promise<boolean> {
-  if (!auth.token) return false;
-  const res = await fetch(apiUrl('/sort'), {
-    headers: { authorization: `Bearer ${auth.token}` },
-  });
-  if (res.status === 401) {
-    auth.logout();
-    return false;
+async function loadSortFromServer(): Promise<RemoteConfigLoadState> {
+  if (!auth.token) return 'unauthorized';
+  try {
+    const res = await fetch(apiUrl('/sort'), {
+      headers: { authorization: `Bearer ${auth.token}` },
+    });
+    if (res.status === 401) {
+      auth.logout();
+      return 'unauthorized';
+    }
+    if (!res.ok) return 'error';
+    const data = await res.json();
+    const arrayInput = data?.sort?.arrayInput;
+    if (typeof arrayInput !== 'string' || arrayInput.trim().length === 0) {
+      return 'empty';
+    }
+    sortArrayInput.value = arrayInput;
+    saveSortToLocalForUser(arrayInput, auth.user?.id);
+    return 'loaded';
+  } catch {
+    return 'error';
   }
-  if (!res.ok) return false;
-  const data = await res.json();
-  const arrayInput = data?.sort?.arrayInput;
-  if (typeof arrayInput !== 'string' || arrayInput.trim().length === 0) {
-    return false;
+}
+
+async function handleSearchCloudRestore(): Promise<void> {
+  const status = await loadSearchFromServer();
+  if (status === 'empty') {
+    const source = restoreSearchFromBestLocal('云端无数据，已加载本地查找配置。');
+    if (source) {
+      await saveSearchImmediately(searchArrayInput.value, searchTarget.value);
+    }
+    return;
   }
-  sortArrayInput.value = arrayInput;
-  saveSortToLocalForUser(arrayInput, auth.user?.id);
-  return true;
+  if (status === 'error') {
+    pushToast('error', '查找配置云端读取失败，已保留当前本地配置');
+  }
+}
+
+async function handleSortCloudRestore(): Promise<void> {
+  const status = await loadSortFromServer();
+  if (status === 'empty') {
+    const source = restoreSortFromBestLocal('云端无数据，已加载本地排序配置。');
+    if (source) {
+      await saveSortImmediately(sortArrayInput.value);
+    }
+    return;
+  }
+  if (status === 'error') {
+    pushToast('error', '排序配置云端读取失败，已保留当前本地配置');
+  }
 }
 
 function formatAuthError(e: any): string {
@@ -3134,20 +3172,8 @@ async function onLogin() {
     if (!loaded) {
       restoreTreeFromLocal('云端无数据，已加载本地树。');
     }
-    const searchLoaded = await loadSearchFromServer();
-    if (!searchLoaded) {
-      const source = restoreSearchFromBestLocal('云端无数据，已加载本地查找配置。');
-      if (source) {
-        await saveSearchImmediately(searchArrayInput.value, searchTarget.value);
-      }
-    }
-    const sortLoaded = await loadSortFromServer();
-    if (!sortLoaded) {
-      const source = restoreSortFromBestLocal('云端无数据，已加载本地排序配置。');
-      if (source) {
-        await saveSortImmediately(sortArrayInput.value);
-      }
-    }
+    await handleSearchCloudRestore();
+    await handleSortCloudRestore();
     await router.push('/');
   } catch (e: any) {
     authError.value = formatAuthError(e) || '登录失败';
@@ -3213,22 +3239,8 @@ watch(
           restoreTreeFromLocal('云端无数据，已加载本地树。');
         }
       });
-      void loadSearchFromServer().then((loaded) => {
-        if (!loaded) {
-          const source = restoreSearchFromBestLocal('云端无数据，已加载本地查找配置。');
-          if (source) {
-            void saveSearchImmediately(searchArrayInput.value, searchTarget.value);
-          }
-        }
-      });
-      void loadSortFromServer().then((loaded) => {
-        if (!loaded) {
-          const source = restoreSortFromBestLocal('云端无数据，已加载本地排序配置。');
-          if (source) {
-            void saveSortImmediately(sortArrayInput.value);
-          }
-        }
-      });
+      void handleSearchCloudRestore();
+      void handleSortCloudRestore();
     }
   },
   { immediate: true }

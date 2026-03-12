@@ -57,7 +57,7 @@
         </el-menu>
       </el-aside>
 
-      <el-main ref="centerRef" class="center">
+      <el-main ref="centerRef" :class="['center', { 'canvas-fullscreen': canvasFullscreen }]" >
         <el-button
           v-if="immersiveMode"
           class="immersive-exit-btn"
@@ -67,6 +67,16 @@
           @click="toggleImmersiveMode"
         >
           退出沉浸（Esc）
+        </el-button>
+        <el-button
+          class="canvas-fullscreen-btn"
+          size="small"
+          plain
+          :icon="canvasFullscreen ? CloseBold : FullScreen"
+          :aria-label="canvasFullscreen ? '退出动画区全屏' : '进入动画区全屏'"
+          @click="toggleCanvasFullscreen"
+        >
+          {{ canvasFullscreen ? '退出全屏' : '动画区全屏' }}
         </el-button>
         <el-button
           class="floating-toggle-btn"
@@ -324,7 +334,7 @@
 import { reactive, ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { Fold, Expand, View, Hide } from '@element-plus/icons-vue';
+import { Fold, Expand, View, Hide, FullScreen, CloseBold } from '@element-plus/icons-vue';
 import { storeToRefs } from 'pinia';
 import GraphCanvas from '../components/GraphCanvas.vue';
 import PlayerControls from '../components/PlayerControls.vue';
@@ -2814,6 +2824,7 @@ watch(graphMode, (mode) => {
 const centerRef = ref<any>(null);
 const floatingPanelRef = ref<HTMLElement | null>(null);
 const immersiveMode = ref(false);
+const canvasFullscreen = ref(false);
 const showFloatingPanel = ref(true);
 const floatingPanelPos = reactive({
   x: 0,
@@ -2954,6 +2965,32 @@ function toggleImmersiveMode() {
   immersiveMode.value = !immersiveMode.value;
 }
 
+function syncCanvasFullscreenState() {
+  canvasFullscreen.value = document.fullscreenElement === getCenterEl();
+  onFloatingPanelWindowResize();
+}
+
+async function toggleCanvasFullscreen() {
+  const centerEl = getCenterEl();
+  if (!centerEl) return;
+  try {
+    if (document.fullscreenElement === centerEl) {
+      await document.exitFullscreen();
+      return;
+    }
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    }
+    if (typeof centerEl.requestFullscreen !== 'function') {
+      pushToast('info', '当前浏览器不支持动画区全屏');
+      return;
+    }
+    await centerEl.requestFullscreen();
+  } catch {
+    pushToast('error', '动画区全屏切换失败');
+  }
+}
+
 watch(immersiveMode, async () => {
   await nextTick();
   onFloatingPanelWindowResize();
@@ -2977,12 +3014,14 @@ onMounted(async () => {
   initFloatingPanelPos();
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('resize', onFloatingPanelWindowResize);
+  document.addEventListener('fullscreenchange', syncCanvasFullscreenState);
 });
 
 onUnmounted(() => {
   stopFloatingPanelDrag();
   window.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('resize', onFloatingPanelWindowResize);
+  document.removeEventListener('fullscreenchange', syncCanvasFullscreenState);
 });
 
 async function loadGraphFromServer() {
@@ -3349,10 +3388,25 @@ watch(
   z-index: 12;
 }
 
-.floating-toggle-btn {
+.canvas-fullscreen-btn {
   position: absolute;
   top: 16px;
   left: 16px;
+  z-index: 12;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.canvas-fullscreen-btn:hover {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(240, 253, 250, 0.96);
+}
+
+.floating-toggle-btn {
+  position: absolute;
+  top: 16px;
+  left: 136px;
   z-index: 12;
   width: 38px;
   height: 38px;
@@ -3458,5 +3512,12 @@ watch(
 
 .page.immersive-mode .center {
   padding: 8px;
+}
+
+.center:fullscreen {
+  padding: 12px;
+  background: radial-gradient(1200px 600px at 20% 0%, rgba(34, 197, 94, 0.14), transparent 60%),
+    radial-gradient(900px 500px at 90% 20%, rgba(16, 185, 129, 0.14), transparent 55%),
+    var(--app-bg);
 }
 </style>

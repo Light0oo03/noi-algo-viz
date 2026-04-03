@@ -3406,7 +3406,7 @@ watch(
 .floating-toggle-btn {
   position: absolute;
   top: 16px;
-  left: 136px;
+  right: 16px;
   z-index: 12;
   width: 38px;
   height: 38px;

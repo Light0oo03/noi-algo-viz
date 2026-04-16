@@ -78,7 +78,7 @@ function barStyle(value: number): Record<string, string> {
 
 function pointerStyle(index: number): Record<string, string> {
   return {
-    left: `${(index + 1) * 62 + 26}px`,
+    left: `${index * 62 + 26}px`,
   };
 }
 

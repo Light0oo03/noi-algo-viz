@@ -2935,14 +2935,42 @@ function onKeyDown(evt: KeyboardEvent) {
     return;
   }
   if (isEditingText()) return;
-  if (graphPlayerStatus.value === 'playing') return;
-  if (isListAlgo.value || isStackAlgo.value || isQueueAlgo.value || isTreeAlgo.value || isSearchAlgo.value || isSortAlgo.value) return;
   if (evt.altKey) return;
 
   const key = evt.key.toLowerCase();
   const isMac = /mac|iphone|ipad|ipod/i.test(navigator.platform);
   const hasModifier = isMac ? evt.metaKey : evt.ctrlKey;
   if (!hasModifier) return;
+
+  const currentPlayerStatus = isListAlgo.value
+    ? listPlayerStatus.value
+    : isStackAlgo.value
+      ? stackPlayerStatus.value
+      : isQueueAlgo.value
+        ? queuePlayerStatus.value
+        : isTreeAlgo.value
+          ? treePlayerStatus.value
+          : isSearchAlgo.value
+            ? searchPlayerStatus.value
+            : isSortAlgo.value
+              ? sortPlayerStatus.value
+              : graphPlayerStatus.value;
+
+  if (currentPlayerStatus === 'playing') return;
+
+  if (evt.key === 'ArrowLeft') {
+    evt.preventDefault();
+    stepBack();
+    return;
+  }
+
+  if (evt.key === 'ArrowRight') {
+    evt.preventDefault();
+    step();
+    return;
+  }
+
+  if (isListAlgo.value || isStackAlgo.value || isQueueAlgo.value || isTreeAlgo.value || isSearchAlgo.value || isSortAlgo.value) return;
 
   const isUndo = key === 'z' && !evt.shiftKey;
   const isRedo = isMac ? (key === 'z' && evt.shiftKey) : (key === 'y' || (key === 'z' && evt.shiftKey));
